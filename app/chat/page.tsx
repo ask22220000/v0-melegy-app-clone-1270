@@ -135,7 +135,7 @@ export default function ChatPage() {
     setIsListening(true)
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: any) => {
     const file = e.target.files?.[0]
     if (!file) return
 
