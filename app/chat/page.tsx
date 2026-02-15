@@ -515,7 +515,6 @@ export default function ChatPage() {
         content: msg.content,
       }))
 
-      console.log("[v0] Sending request to /api/perplexity-chat with prompt:", currentInput)
       const response = await fetch("/api/perplexity-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -525,12 +524,9 @@ export default function ChatPage() {
         }),
       })
 
-      console.log("[v0] Response status:", response.status)
       const data = await response.json()
-      console.log("[v0] Response data:", data)
 
       if (!response.ok || data.error) {
-        console.error("[v0] API error:", data.error || "Unknown error")
         throw new Error(data.error || "API error")
       }
 
@@ -798,9 +794,19 @@ export default function ChatPage() {
       </div>
 
       {showUsageCard && (
-        <div className="fixed left-4 top-32 z-40 w-64 hidden md:block">
-          <UsageIndicator />
-        </div>
+        <>
+          {/* Desktop - Fixed sidebar */}
+          <div className="fixed left-4 top-32 z-40 w-64 hidden md:block">
+            <UsageIndicator />
+          </div>
+          
+          {/* Mobile - Modal overlay */}
+          <div className="fixed inset-0 z-50 bg-black/50 md:hidden" onClick={() => setShowUsageCard(false)}>
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm" onClick={(e) => e.stopPropagation()}>
+              <UsageIndicator />
+            </div>
+          </div>
+        </>
       )}
 
       {showChatHistory && (
