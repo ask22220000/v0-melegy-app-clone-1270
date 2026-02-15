@@ -338,8 +338,6 @@ export default function ChatProPage() {
           .replace(/(?:اكتب|write|كتابة)\s+.+?(?:\s+على|\s+فوق|$)/gi, "")
           .trim()
 
-        console.log("[v0] Design generation - Image:", cleanImagePrompt, "Text:", extractedText)
-
         // Generate design
         const response = await fetch("/api/generate-design", {
           method: "POST",
@@ -405,7 +403,7 @@ export default function ChatProPage() {
         body: JSON.stringify({ action, data }),
       })
     } catch (error) {
-      console.log("[v0] Analytics tracking error:", error)
+      // Silent fail - analytics are non-critical
     }
   }
 
@@ -427,7 +425,7 @@ export default function ChatProPage() {
       })
       setConversationCreated(true)
     } catch (error) {
-      console.log("[v0] Failed to create conversation:", error)
+      // Silent fail - conversation tracking is non-critical
     }
   }
 
@@ -986,15 +984,14 @@ export default function ChatProPage() {
                     src={message.imageUrl || "/placeholder.svg"}
                     alt="Generated or attached"
                     className="rounded-lg max-w-full cursor-pointer"
-                    onClick={() => setZoomedImage(message.imageUrl!)}
-                    onError={(e) => {
-                      console.log("[v0] Image failed to load, retrying...", message.imageUrl)
-                      // Retry loading the image after a delay
-                      setTimeout(() => {
-                        const target = e.target as HTMLImageElement
-                        target.src = message.imageUrl || "/placeholder.svg"
-                      }, 2000)
-                    }}
+                  onClick={() => setZoomedImage(message.imageUrl!)}
+                  onError={(e) => {
+                    // Retry loading the image after a delay
+                    setTimeout(() => {
+                      const target = e.target as HTMLImageElement
+                      target.src = message.imageUrl!
+                    }, 1000)
+                  }}
                     onLoad={() => {
                       console.log("[v0] Image loaded successfully:", message.imageUrl)
                     }}
