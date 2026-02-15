@@ -1,16 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import * as fal from "@fal-ai/serverless-client"
+import { generateText } from "ai"
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.FAL_KEY) {
-      return NextResponse.json({ error: "FAL_KEY is not configured" }, { status: 500 })
-    }
-
-    fal.config({
-      credentials: process.env.FAL_KEY,
-    })
-
     const { imageUrl, userMessage } = await request.json()
 
     if (!imageUrl) {
@@ -37,29 +29,35 @@ export async function POST(request: NextRequest) {
 ${userPrompt !== "وصفلي الصورة دي بالتفصيل" ? `\n\nالمستخدم عايز يعرف: ${userPrompt}` : ""}`
 
     try {
-      const result = await fal.subscribe("fal-ai/llava-next", {
-        input: {
-          image_url: imageUrl,
-          prompt: analysisPrompt,
-          max_tokens: 2048,
-        },
-        logs: false,
+      // Use Google Gemini 3 Flash with vision capability from Vercel AI Gateway
+      const result = await generateText({
+        model: "google/gemini-3-flash",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: analysisPrompt },
+              { type: "image", image: imageUrl }
+            ]
+          }
+        ],
+        maxTokens: 2048,
+        temperature: 0.7,
       })
 
-      const description = (result as any).output || (result as any).description
+      const description = result.text
 
       if (description && description.trim() && description.length > 20) {
-        return NextResponse.json({ description: description.trim(), provider: "fal-vision" })
+        return NextResponse.json({ description: description.trim(), provider: "gemini-vision" })
       }
 
-      throw new Error("No valid description from fal API")
-    } catch (falError: any) {
-      if (falError.status === 403 && falError.body?.detail?.includes("Exhausted balance")) {
-        throw new Error("رصيد FAL انتهى")
-      }
-      throw falError
+      throw new Error("No valid description from Gemini API")
+    } catch (geminiError: any) {
+      console.error("[v0] Gemini vision error:", geminiError)
+      throw geminiError
     }
   } catch (error: any) {
+    console.error("[v0] Image analysis error:", error)
     return NextResponse.json({ error: "حصل خطأ في تحليل الصورة" }, { status: 500 })
   }
 }
