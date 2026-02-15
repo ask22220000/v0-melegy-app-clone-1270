@@ -9,7 +9,7 @@ interface ExodusAIResponse {
 }
 
 export class ExodusAIService {
-  private baseUrl = "https://text.pollinations.ai"
+  private baseUrl = "https://text.pollinations.ai/"
   private conversationHistory = new Map<string, Array<{ role: string; content: string }>>()
 
   /**

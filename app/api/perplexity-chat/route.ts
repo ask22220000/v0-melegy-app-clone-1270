@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Final messages array:", JSON.stringify(messages.map(m => ({ role: m.role, contentLength: m.content.length }))))
 
     // Use Pollinations AI with perplexity-fast model
-    const pollinationsResponse = await fetch("https://text.pollinations.ai", {
+    const pollinationsResponse = await fetch("https://text.pollinations.ai/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

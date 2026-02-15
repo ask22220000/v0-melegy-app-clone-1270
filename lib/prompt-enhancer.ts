@@ -11,7 +11,7 @@ export async function translateToEnglish(text: string): Promise<string> {
     }
 
     console.log("[v0] Translating Arabic text to English...")
-    const response = await fetch("https://text.pollinations.ai", {
+    const response = await fetch("https://text.pollinations.ai/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -51,7 +51,7 @@ export async function translateToEnglish(text: string): Promise<string> {
 export async function enhancePromptForImageGeneration(prompt: string): Promise<string> {
   try {
     console.log("[v0] Enhancing prompt with Pollinations (perplexity-fast)...")
-    const response = await fetch("https://text.pollinations.ai", {
+    const response = await fetch("https://text.pollinations.ai/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -100,7 +100,7 @@ export async function processPromptForImageGeneration(userPrompt: string): Promi
       : "You are a professional AI image prompt engineer. Enhance the description with professional visual details (lighting, composition, style, colors, mood). IMPORTANT: Remove any instructions to write or add text/words on the image. Focus ONLY on visual elements, not text overlays. Return ONLY the enhanced prompt in under 100 words."
 
     console.log("[v0] Processing with Pollinations (perplexity-fast - translate + enhance)...")
-    const response = await fetch("https://text.pollinations.ai", {
+    const response = await fetch("https://text.pollinations.ai/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
