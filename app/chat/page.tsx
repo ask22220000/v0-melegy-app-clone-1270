@@ -794,9 +794,19 @@ export default function ChatPage() {
       </div>
 
       {showUsageCard && (
-        <div className="fixed left-4 top-32 z-40 w-64 hidden md:block">
-          <UsageIndicator />
-        </div>
+        <>
+          {/* Desktop - Fixed sidebar */}
+          <div className="fixed left-4 top-32 z-40 w-64 hidden md:block">
+            <UsageIndicator />
+          </div>
+          
+          {/* Mobile - Modal overlay */}
+          <div className="fixed inset-0 z-50 bg-black/50 md:hidden" onClick={() => setShowUsageCard(false)}>
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-sm" onClick={(e) => e.stopPropagation()}>
+              <UsageIndicator />
+            </div>
+          </div>
+        </>
       )}
 
       {showChatHistory && (
