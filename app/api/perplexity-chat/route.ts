@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
     })
     
     console.log("[v0] Final messages array:", JSON.stringify(messages.map(m => ({ role: m.role, contentLength: m.content.length }))))
+    console.log("[v0] Calling Pollinations AI with openai model...")
 
     // Use Pollinations AI with openai model (GPT-5 Nano - faster and more up-to-date)
     const pollinationsResponse = await fetch("https://text.pollinations.ai/", {
@@ -135,6 +136,8 @@ export async function POST(request: NextRequest) {
       }),
     })
 
+    console.log("[v0] Pollinations response status:", pollinationsResponse.status)
+    
     if (!pollinationsResponse.ok) {
       const errorText = await pollinationsResponse.text()
       console.error("[v0] Pollinations AI error:", pollinationsResponse.status, errorText)
@@ -142,6 +145,7 @@ export async function POST(request: NextRequest) {
     }
 
     let responseText = await pollinationsResponse.text()
+    console.log("[v0] Raw response text:", responseText.substring(0, 200))
     
     if (!responseText || responseText.length < 5) {
       responseText = "معلش حصل مشكلة، جرب تاني"
