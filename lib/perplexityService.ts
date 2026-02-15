@@ -1,7 +1,5 @@
 import { EGYPTIAN_DIALECT_INSTRUCTIONS } from "./egyptianDialect"
 
-const PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions"
-
 interface Message {
   role: "user" | "assistant" | "system"
   content: string
@@ -12,13 +10,7 @@ export async function generatePerplexityResponse(userInput: string, conversation
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      console.log(`[v0] Attempt ${attempt + 1}/${MAX_RETRIES} - Using Perplexity API`)
-
-      const apiKey = process.env.PERPLEXITY_API_KEY
-
-      if (!apiKey) {
-        throw new Error("PERPLEXITY_API_KEY is not configured")
-      }
+      console.log(`[v0] Attempt ${attempt + 1}/${MAX_RETRIES} - Using Pollinations AI (perplexity-fast)`)
 
       const messages: any[] = [
         {
@@ -52,22 +44,21 @@ export async function generatePerplexityResponse(userInput: string, conversation
         content: userInput,
       })
 
-      console.log("[v0] Sending request to Perplexity with", messages.length, "messages")
+      console.log("[v0] Sending request to Pollinations with", messages.length, "messages")
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 25000)
 
-      const response = await fetch(PERPLEXITY_API_URL, {
+      const response = await fetch("https://text.pollinations.ai", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "sonar",
+          model: "perplexity-fast",
           messages,
-          max_tokens: 800,
-          temperature: 0.7,
+          seed: Math.floor(Math.random() * 99999),
+          jsonMode: false,
         }),
         signal: controller.signal,
       })
@@ -76,7 +67,7 @@ export async function generatePerplexityResponse(userInput: string, conversation
 
       if (!response.ok) {
         const errorBody = await response.text()
-        console.error(`[v0] Perplexity API error: ${response.status}`, errorBody)
+        console.error(`[v0] Pollinations API error: ${response.status}`, errorBody)
 
         if (response.status === 429) {
           console.log("[v0] Rate limit exceeded, retrying...")
@@ -87,13 +78,11 @@ export async function generatePerplexityResponse(userInput: string, conversation
         throw new Error(`API error: ${response.status}`)
       }
 
-      const data = await response.json()
-      console.log("[v0] ✅ Received response from Perplexity successfully")
+      let generatedText = await response.text()
+      console.log("[v0] ✅ Received response from Pollinations successfully")
 
-      let generatedText = data.choices?.[0]?.message?.content || ""
-
-      if (!generatedText) {
-        console.log("[v0] Empty response from Perplexity, retrying...")
+      if (!generatedText || generatedText.length < 3) {
+        console.log("[v0] Empty response from Pollinations, retrying...")
         continue
       }
 
@@ -116,7 +105,7 @@ export async function generatePerplexityResponse(userInput: string, conversation
     }
   }
 
-  throw new Error("فشل الاتصال بـ Perplexity API")
+  throw new Error("فشل الاتصال")
 }
 
 export async function generateStreamingResponse(

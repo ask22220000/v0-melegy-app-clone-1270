@@ -79,6 +79,7 @@ export default function ChatPage() {
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [showFunctionsMenu, setShowFunctionsMenu] = useState(false)
+  const [showUsageCard, setShowUsageCard] = useState(true)
   const [theme, setTheme] = useState<"light" | "dark">("dark")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -755,8 +756,7 @@ export default function ChatPage() {
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
             <Link
               href="/"
-              className="bg-card border-2 border-border text-foreground px-2 py-1.5 sm:px-3 sm:py-2 md:px-4 rounded-lg transition-all duration-300 hover:bg-accent hover:border-accent-foreground/50 hover:shadow-lg hover:scale-105 flex items-center gap-1 sm:gap-1.5 cursor-pointer font-medium text-xs sm:text-sm"
-              aria-label="الصفحة الرئيسية"
+              className="bg-card border-2 border-border text-foreground px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg transition-all duration-300 hover:bg-accent hover:border-accent-foreground/50 hover:shadow-lg hover:scale-105 flex items-center"
             >
               <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">الرئيسية</span>
@@ -768,7 +768,36 @@ export default function ChatPage() {
             >
               {theme === "dark" ? <Sun className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Moon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
             </button>
+            <button
+              onClick={() => setShowUsageCard(!showUsageCard)}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg transition-all duration-300 hover:shadow-lg hover:scale-105 flex items-center cursor-pointer border-none"
+              aria-label="عرض حدود الاستخدام"
+              title="عرض/إخفاء حدود الاستخدام"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4"
+              >
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+            </button>
           </div>
+        </div>
+      </div>
+
+      {showUsageCard && (
+        <div className="fixed right-0 top-16 z-40 p-4 w-64 hidden md:block">
+          <UsageIndicator />
+        </div>
+      )}
         </div>
       </div>
 
