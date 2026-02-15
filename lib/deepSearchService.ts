@@ -13,7 +13,7 @@ interface DeepSearchResult {
 }
 
 export class DeepSearchService {
-  private readonly SEARCHGPT_API = "https://text.pollinations.ai"
+  private readonly SEARCHGPT_API = "https://text.pollinations.ai/"
   private readonly MODEL = "openai" // استخدام موديل مجاني متاح
 
   async searchInternet(query: string): Promise<DeepSearchResult> {
