@@ -14,7 +14,11 @@ export function Hero() {
         <div className="relative">
           <div className="absolute inset-0 bg-blue-600/30 rounded-full blur-3xl" />
           <div className="relative w-48 h-48 rounded-full bg-gradient-to-br from-blue-900/80 to-blue-950/80 backdrop-blur-xl border border-blue-500/30 flex items-center justify-center overflow-hidden">
-            <div className="text-6xl font-bold text-blue-400">ميليجي</div>
+            <img 
+              src="/images/logo.jpg" 
+              alt="Melegy Logo" 
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </div>
