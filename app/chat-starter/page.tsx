@@ -384,7 +384,7 @@ export default function ChatStarterPage() {
         body: JSON.stringify({ action, data }),
       })
     } catch (error) {
-      console.log("[v0] Analytics tracking error:", error)
+      // Silent fail - analytics are non-critical
     }
   }
 
@@ -406,7 +406,7 @@ export default function ChatStarterPage() {
       })
       setConversationCreated(true)
     } catch (error) {
-      console.log("[v0] Failed to create conversation:", error)
+      // Silent fail - conversation tracking is non-critical
     }
   }
 
