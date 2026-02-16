@@ -157,8 +157,28 @@ export default function ChatPage() {
   }
 
   const detectExcelRequest = (text: string): boolean => {
-    const excelKeywords = ["شيت", "excel", "اكسيل", "جدول", "spreadsheet", "اعمل شيت", "بيانات"]
-    return excelKeywords.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase()))
+    const lowerText = text.toLowerCase()
+    
+    // Must explicitly request Excel/sheet creation
+    const explicitExcelKeywords = [
+      "اعمل شيت",
+      "اعملي شيت",
+      "عاوز شيت",
+      "ولد شيت",
+      "انشئ شيت",
+      "اعمل excel",
+      "اعمل اكسيل",
+      "اعمل جدول",
+      "ولد excel",
+      "ولد اكسيل",
+      "create excel",
+      "generate excel",
+      "make excel",
+      "create sheet",
+      "generate sheet"
+    ]
+    
+    return explicitExcelKeywords.some((keyword) => lowerText.includes(keyword))
   }
 
   const detectImageEditRequest = (text: string, hasAttachedImage: boolean): boolean => {
