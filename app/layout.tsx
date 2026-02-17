@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { AppProvider } from "@/lib/contexts/AppContext"
 import { SessionTracker } from "@/components/session-tracker"
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
+import { ErrorBoundary } from "@/components/error-boundary"
 // import { ThemeToggle } from "@/components/theme-toggle"
 import "./globals.css"
 
@@ -71,11 +72,13 @@ export default function RootLayout({
         <script src="/register-sw.js" defer></script>
       </head>
       <body className={`${cairo.className} antialiased`}>
-        <AppProvider>
-          <SessionTracker />
-          <PWAInstallPrompt />
-          {children}
-        </AppProvider>
+        <ErrorBoundary>
+          <AppProvider>
+            <SessionTracker />
+            <PWAInstallPrompt />
+            {children}
+          </AppProvider>
+        </ErrorBoundary>
         <Analytics />
       </body>
     </html>

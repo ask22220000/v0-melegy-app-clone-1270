@@ -7,8 +7,14 @@ export function SessionTracker() {
   useSessionTracking()
 
   useEffect(() => {
-    // Track user on first visit
-    trackUser()
+    // Track user on first visit with error handling
+    try {
+      trackUser().catch(() => {
+        // Silently fail - don't disrupt user experience
+      })
+    } catch (error) {
+      // Silently fail - don't disrupt user experience
+    }
   }, [])
 
   return null

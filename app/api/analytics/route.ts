@@ -2,6 +2,32 @@ import { getServiceRoleClient } from "@/lib/supabase/server"
 
 export async function GET() {
   try {
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("[v0] Supabase environment variables not configured")
+      return Response.json(
+        {
+          activeUsersNow: 0,
+          totalUsers: 0,
+          subscriptionsByPlan: { free: 0, starter: 0, pro: 0, advanced: 0 },
+          totalConversations: 0,
+          totalMessages: 0,
+          messagesPerMinute: 0,
+          averageResponseTime: 0,
+          activeUsers: 0,
+          featureUsage: {},
+          responseTypes: {},
+          userSatisfaction: {},
+          systemHealth: { apiResponseTime: 0, uptime: 99.9, errorRate: 0.01 },
+          topQueries: [],
+          hourlyActivity: [],
+          lastUpdated: new Date(),
+          error: "Database not configured",
+        },
+        { status: 200 }
+      )
+    }
+
     const supabase = getServiceRoleClient()
 
     let activeUsersNow = 0
@@ -309,6 +335,12 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("[v0] Supabase not configured, skipping analytics tracking")
+      return Response.json({ success: true, skipped: true })
+    }
+
     const supabase = getServiceRoleClient()
     const body = await req.json()
     const { action, data } = body

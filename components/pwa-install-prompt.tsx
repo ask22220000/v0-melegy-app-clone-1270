@@ -16,14 +16,22 @@ export function PWAInstallPrompt() {
 
   useEffect(() => {
     // Check if already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      return
+    try {
+      if (window.matchMedia("(display-mode: standalone)").matches) {
+        return
+      }
+    } catch (error) {
+      console.error("[v0] Error checking PWA display mode:", error)
     }
 
     // Check if user dismissed before
-    const dismissed = localStorage.getItem("pwa-install-dismissed")
-    if (dismissed) {
-      return
+    try {
+      const dismissed = localStorage.getItem("pwa-install-dismissed")
+      if (dismissed) {
+        return
+      }
+    } catch (error) {
+      console.error("[v0] Error accessing localStorage:", error)
     }
 
     // Detect iOS
@@ -70,7 +78,11 @@ export function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false)
-    localStorage.setItem("pwa-install-dismissed", "true")
+    try {
+      localStorage.setItem("pwa-install-dismissed", "true")
+    } catch (error) {
+      console.error("[v0] Error saving to localStorage:", error)
+    }
   }
 
   if (!showPrompt) {

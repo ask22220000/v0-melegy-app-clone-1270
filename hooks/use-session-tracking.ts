@@ -15,7 +15,6 @@ function getSessionId() {
   let sessionId = sessionStorage.getItem("melegy_session_id")
   if (!sessionId) {
     sessionId = generateSessionId()
-    sessionStorage.getItem("melegy_session_id")
     sessionStorage.setItem("melegy_session_id", sessionId)
   }
   return sessionId
