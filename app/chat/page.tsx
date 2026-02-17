@@ -157,8 +157,28 @@ export default function ChatPage() {
   }
 
   const detectExcelRequest = (text: string): boolean => {
-    const excelKeywords = ["شيت", "excel", "اكسيل", "جدول", "spreadsheet", "اعمل شيت", "بيانات"]
-    return excelKeywords.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase()))
+    const lowerText = text.toLowerCase()
+    
+    // Must explicitly request Excel/sheet creation
+    const explicitExcelKeywords = [
+      "اعمل شيت",
+      "اعملي شيت",
+      "عاوز شيت",
+      "ولد شيت",
+      "انشئ شيت",
+      "اعمل excel",
+      "اعمل اكسيل",
+      "اعمل جدول",
+      "ولد excel",
+      "ولد اكسيل",
+      "create excel",
+      "generate excel",
+      "make excel",
+      "create sheet",
+      "generate sheet"
+    ]
+    
+    return explicitExcelKeywords.some((keyword) => lowerText.includes(keyword))
   }
 
   const detectImageEditRequest = (text: string, hasAttachedImage: boolean): boolean => {
@@ -224,27 +244,91 @@ export default function ChatPage() {
     setIsListening(true)
   }
 
-  const handleFileUpload = (e: any) => {
+  const handleFileUpload = async (e: any) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith("image/")) {
+    const supportedTypes = [
+      "image/",
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "audio/mpeg",
+      "audio/mp3"
+    ]
+
+    const isSupported = supportedTypes.some(type => file.type.startsWith(type) || file.type === type)
+
+    if (!isSupported) {
       toast({
         title: "نوع ملف غير مدعوم",
-        description: "من فضلك ارفع صورة فقط",
+        description: "من فضلك ارفع: صورة، PDF، Word، Excel أو MP3",
         variant: "destructive",
       })
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      setAttachedImage({
-        url: event.target?.result as string,
-        name: file.name,
-      })
+    // For images, show preview
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setAttachedImage({
+          url: event.target?.result as string,
+          name: file.name,
+        })
+      }
+      reader.readAsDataURL(file)
+    } 
+    // For other files, process immediately
+    else {
+      setIsLoading(true)
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("prompt", input || "قم بتحليل هذا الملف")
+
+        const response = await fetch("/api/upload-file", {
+          method: "POST",
+          body: formData,
+        })
+
+        const data = await response.json()
+
+        if (!response.ok || data.error) {
+          throw new Error(data.error || "فشل رفع الملف")
+        }
+
+        // Add AI response with file analysis
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            role: "user",
+            content: `📎 ${file.name}: ${input || "تحليل الملف"}`,
+          },
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: data.content,
+          },
+        ])
+
+        setInput("")
+        toast({
+          title: "تم معالجة الملف بنجاح",
+          description: `تم تحليل ${file.name}`,
+        })
+      } catch (error: any) {
+        toast({
+          title: "فشل معالجة الملف",
+          description: error.message,
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
-    reader.readAsDataURL(file)
   }
 
   const generateImageWithPrompt = async (userPrompt: string) => {
@@ -1044,7 +1128,13 @@ export default function ChatPage() {
           >
             {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           </Button>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+          <input 
+            ref={fileInputRef} 
+            type="file" 
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,audio/*" 
+            onChange={handleFileUpload} 
+            className="hidden" 
+          />
         </div>
       </form>
 
