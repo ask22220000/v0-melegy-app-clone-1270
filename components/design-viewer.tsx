@@ -74,7 +74,7 @@ export function DesignViewer({ backgroundImage, textLayer, onTextUpdate }: Desig
 
       <div className="space-y-4">
         {/* Design Preview */}
-        <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-gray-900 border border-gray-800 group">
+        <div className="relative w-full aspect-[4/5] rounded-lg overflow-hidden bg-gray-900 border border-gray-800 group">
           {/* Download Button (Floating) */}
           <div className="absolute top-2 right-2 z-10">
             <Button

@@ -29,13 +29,13 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Generating image with enhanced prompt:", finalPrompt)
 
-    // Generate image using the fal schnell model with 4:5 portrait format (2160x2700)
+    // Generate image using the fal schnell model with 4:5 portrait format (1080x1350)
     const result = await fal.subscribe("fal-ai/flux/schnell", {
       input: {
         prompt: finalPrompt,
         image_size: {
-          width: 2160,
-          height: 2700
+          width: 1080,
+          height: 1350
         },
         num_inference_steps: 4,
         num_images: 1,
