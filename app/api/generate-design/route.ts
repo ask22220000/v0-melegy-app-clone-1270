@@ -64,7 +64,10 @@ export async function POST(request: NextRequest) {
     const result = await fal.subscribe("fal-ai/flux/schnell", {
       input: {
         prompt: cleanPrompt,
-        image_size: "landscape_4_3",
+        image_size: {
+          width: 1080,
+          height: 1350
+        }, // 4:5 portrait format (1080x1350)
         num_inference_steps: 4,
         num_images: 1,
         enable_safety_checker: false,

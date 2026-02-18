@@ -18,22 +18,25 @@ export async function POST(request: NextRequest) {
       credentials: process.env.FAL_KEY,
     })
 
-    const { imageUrls, prompt } = await request.json()
+    const { imageUrl, imageUrls, prompt } = await request.json()
 
-    if (!imageUrls || imageUrls.length === 0 || !prompt) {
-      return NextResponse.json({ error: "Image URLs and prompt are required" }, { status: 400 })
+    // Support both single imageUrl and multiple imageUrls
+    const finalImageUrls = imageUrls || (imageUrl ? [imageUrl] : [])
+
+    if (!finalImageUrls || finalImageUrls.length === 0 || !prompt) {
+      return NextResponse.json({ error: "Image URL(s) and prompt are required" }, { status: 400 })
     }
 
-    if (imageUrls.length > 3) {
+    if (finalImageUrls.length > 3) {
       return NextResponse.json({ error: "Maximum 3 images allowed" }, { status: 400 })
     }
 
     // Step 1: Validate base64 image sizes
-    for (let i = 0; i < imageUrls.length; i++) {
-      const imageUrl = imageUrls[i]
-      if (imageUrl.startsWith("data:")) {
+    for (let i = 0; i < finalImageUrls.length; i++) {
+      const imgUrl = finalImageUrls[i]
+      if (imgUrl.startsWith("data:")) {
         // Check base64 size (rough estimate: base64 is ~33% larger than binary)
-        const base64Size = imageUrl.length * 0.75 / 1024 / 1024 // MB
+        const base64Size = imgUrl.length * 0.75 / 1024 / 1024 // MB
         
         if (base64Size > 10) {
           throw new Error(`الصورة ${i + 1} كبيرة جداً (أكثر من 10 ميجا). استخدم صورة أصغر.`)
@@ -50,11 +53,14 @@ export async function POST(request: NextRequest) {
       result = await fal.subscribe("fal-ai/flux-2/turbo/edit", {
         input: {
           prompt: enhancedPrompt,
-          image_urls: imageUrls, // Pass all images for combination/editing
+          image_urls: finalImageUrls, // Pass all images for combination/editing
           strength: 0.5, // Balance between preservation and editing
           guidance_scale: 3.5,
           num_inference_steps: 4, // Turbo model uses fewer steps
-          image_size: "portrait_4_5", // 1080x1350 portrait output
+          image_size: {
+            width: 1080,
+            height: 1350
+          }, // 4:5 portrait format (1080x1350)
           enable_safety_checker: false,
         },
       })

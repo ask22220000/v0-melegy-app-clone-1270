@@ -71,7 +71,7 @@ export async function generateImage(userPrompt: string): Promise<string> {
   }
 }
 
-export async function editImage(imageUrl: string, editPrompt: string): Promise<string> {
+export async function editImage(imageUrl: string | string[], editPrompt: string): Promise<string> {
   try {
     console.log("[v0] Editing image with prompt:", editPrompt)
 
@@ -89,10 +89,15 @@ export async function editImage(imageUrl: string, editPrompt: string): Promise<s
       englishEditPrompt = await enhancePromptToEnglish(editPrompt)
     }
 
+    // Support both single imageUrl and multiple imageUrls
+    const body = Array.isArray(imageUrl) 
+      ? { imageUrls: imageUrl, prompt: englishEditPrompt }
+      : { imageUrl, prompt: englishEditPrompt }
+
     const response = await fetch("/api/edit-image-fal", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl, prompt: englishEditPrompt }),
+      body: JSON.stringify(body),
     })
 
     if (!response.ok) {
