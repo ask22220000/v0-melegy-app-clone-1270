@@ -629,14 +629,20 @@ export default function ChatPage() {
 
       const data = await response.json()
 
-      if (!response.ok || data.error) {
+      // Check if response is actually an error (not just error field existence)
+      if (!response.ok) {
         throw new Error(data.error || "API error")
+      }
+
+      // If API returned an error explicitly
+      if (data.error && !data.response) {
+        throw new Error(data.error)
       }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.response,
+        content: data.response || data.error || "حصل خطأ في الرد",
       }
 
       setMessages((prev) => [...prev, assistantMessage])
