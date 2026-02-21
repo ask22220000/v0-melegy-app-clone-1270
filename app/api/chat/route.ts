@@ -1,4 +1,4 @@
-import { generateStreamingResponse } from "@/lib/perplexityService"
+// Removed perplexityService - no longer needed
 
 export const maxDuration = 30
 
