@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     console.log(`[v0] Response: ${cleanedText.substring(0, 50)}...`)
 
     return NextResponse.json({
-      response: cleanedText || "معلش حصل مشكلة، جرب تاني 😅",
+      response: cleanedText || "معلش حصل مشكلة، جرب تاني",
       detectedEmotion: "neutral",
       emotionScore: 0,
     })
