@@ -618,7 +618,7 @@ export default function ChatPage() {
         content: msg.content,
       }))
 
-      const response = await fetch("/api/perplexity-chat", {
+      const response = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -629,14 +629,20 @@ export default function ChatPage() {
 
       const data = await response.json()
 
-      if (!response.ok || data.error) {
+      // Check if response is actually an error (not just error field existence)
+      if (!response.ok) {
         throw new Error(data.error || "API error")
+      }
+
+      // If API returned an error explicitly
+      if (data.error && !data.response) {
+        throw new Error(data.error)
       }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.response,
+        content: data.response || data.error || "حصل خطأ في الرد",
       }
 
       setMessages((prev) => [...prev, assistantMessage])
@@ -921,7 +927,7 @@ export default function ChatPage() {
             </Button>
           </div>
           {chatHistories.length === 0 ? (
-            <p className="p-4 text-gray-500 text-center">لا توجد محادثات سابقة</p>
+            <p className="p-4 text-gray-500 text-center">لا توجد مح��دثات سابقة</p>
           ) : (
             chatHistories.map((chat) => (
               <div
