@@ -293,20 +293,6 @@ export const RichTextInput = React.forwardRef<
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-            className="flex items-center gap-2"
-          >
-            <Paperclip className="w-4 h-4" />
-            إرفق ملف
-          </Button>
-        </div>
       </div>
     )
   }
