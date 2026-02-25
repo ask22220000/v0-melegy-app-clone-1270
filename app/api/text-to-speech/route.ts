@@ -12,6 +12,10 @@ export async function POST(request: Request) {
     const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API
     const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || "VxSsN5NGusWQZXue7VE9"
 
+    console.log("[v0] ELEVENLABS_API exists:", !!ELEVENLABS_API_KEY)
+    console.log("[v0] ELEVENLABS_API length:", ELEVENLABS_API_KEY?.length)
+    console.log("[v0] VOICE_ID:", VOICE_ID)
+
     if (!ELEVENLABS_API_KEY) {
       return new Response(
         JSON.stringify({
