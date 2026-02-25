@@ -44,7 +44,7 @@ const EGYPTIAN_SYSTEM_PROMPT = `أنت ميليجي، مساعد ذكي مصري
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { prompt, message, conversationHistory = [], imageUrl } = body
+    const { prompt, message, conversationHistory = [], imageUrl, clientDateTime } = body
     const userPrompt = prompt || message
 
     if (!userPrompt || typeof userPrompt !== "string") {
@@ -112,6 +112,13 @@ export async function POST(request: NextRequest) {
       content: currentContent,
     })
 
+    // Inject real datetime from client device
+    const dateTimeContext = clientDateTime
+      ? `\n\n**التاريخ والوقت الحالي من جهاز المستخدم:** ${clientDateTime}\nاستخدم هذا التاريخ والوقت دايماً لما حد يسأل عن التاريخ أو الوقت.`
+      : ""
+
+    const systemWithDateTime = EGYPTIAN_SYSTEM_PROMPT + dateTimeContext
+
     // Choose model based on search needs
     const modelToUse = needsWebSearch ? "perplexity/sonar" : "google/gemini-3-flash"
 
@@ -120,7 +127,7 @@ export async function POST(request: NextRequest) {
     // Generate response
     const result = await generateText({
       model: modelToUse,
-      system: EGYPTIAN_SYSTEM_PROMPT,
+      system: systemWithDateTime,
       messages,
       maxTokens: 600,
       temperature: 0.7,
