@@ -51,9 +51,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid prompt" }, { status: 400 })
     }
 
+    // Questions about current time/date are answered from clientDateTime - no web search needed
+    const isDateTimeQuestion = /النهاردة|اليوم|الوقت|الساعة|كام في الشهر|today|what time|what date|كم الساعة/.test(userPrompt.toLowerCase())
+
     // Determine if we need web search based on the query
-    const needsWebSearch = 
-      /متى|إمتى|when|تاريخ|حدث|أخبار|news|الآن|now|اليوم|today|حالياً|currently|recent|مقارنة|compare|سعر|price|معلومات عن|information about/.test(userPrompt.toLowerCase())
+    const needsWebSearch = !isDateTimeQuestion &&
+      /متى|إمتى|when|حدث|أخبار|news|الآن|now|حالياً|currently|recent|مقارنة|compare|سعر|price|معلومات عن|information about/.test(userPrompt.toLowerCase())
 
     // Analyze image with Gemini vision if available
     let imageAnalysisContext = ""
