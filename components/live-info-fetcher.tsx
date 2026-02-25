@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
-import { AlertCircle, CheckCircle2, Search } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Search, Loader2 } from 'lucide-react'
 
 interface LiveInfoResponse {
   success: boolean
@@ -85,7 +84,7 @@ export function LiveInfoFetcher() {
         >
           {isLoading ? (
             <>
-              <Spinner className="w-4 h-4 ml-2" />
+              <Loader2 className="w-4 h-4 ml-2 animate-spin" />
               جاري الجلب...
             </>
           ) : (

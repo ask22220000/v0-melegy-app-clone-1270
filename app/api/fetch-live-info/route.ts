@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     }
 
     const result = await generateText({
-      model: 'google/gemini-2-flash-exp',
+      model: 'google/gemini-2-flash',
       system: `You are an expert information assistant. Provide accurate, up-to-date information about the user's query. 
       Format your response in Arabic if the query is in Arabic.
       Be concise and factual.`,
