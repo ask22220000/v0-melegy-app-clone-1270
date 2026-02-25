@@ -11,18 +11,26 @@ export async function POST(request: Request) {
       )
     }
 
-    const result = await generateText({
-      model: 'google/gemini-2-flash',
-      system: `You are an expert information assistant. Provide accurate, up-to-date information about the user's query. 
-      Format your response in Arabic if the query is in Arabic.
-      Be concise and factual.`,
+    // Step 1: Get fresh information from Perplexity/Sonar
+    const perplexityResult = await generateText({
+      model: 'perplexity/sonar',
       prompt: query,
+      maxOutputTokens: 2048,
+    })
+
+    // Step 2: Pass the information to Gemini for polished response
+    const geminiResult = await generateText({
+      model: 'google/gemini-2-flash',
+      system: `You are a helpful assistant responding to users in Arabic with a friendly and professional tone. 
+      Take the provided information and respond naturally to the user's original question.
+      Be conversational, helpful, and accurate.`,
+      prompt: `المعلومات المحدثة: ${perplexityResult.text}\n\nالسؤال الأصلي: ${query}\n\nالرجاء الرد على السؤال بناءً على المعلومات المحدثة أعلاه:`,
       maxOutputTokens: 1024,
     })
 
     return Response.json({
       success: true,
-      content: result.text,
+      content: geminiResult.text,
       query: query,
       timestamp: new Date().toISOString(),
     })
