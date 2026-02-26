@@ -17,18 +17,13 @@ export function PWAInstallPrompt() {
   useEffect(() => {
     // Check if already installed
     if (window.matchMedia("(display-mode: standalone)").matches) {
-      console.log("[PWA] Already installed")
       return
     }
 
-    // Check if user dismissed before (only for 7 days)
-    const dismissedTime = localStorage.getItem("pwa-install-dismissed")
-    if (dismissedTime) {
-      const daysSinceDismissed = (Date.now() - parseInt(dismissedTime)) / (1000 * 60 * 60 * 24)
-      if (daysSinceDismissed < 7) {
-        console.log("[PWA] User dismissed recently")
-        return
-      }
+    // Check if user dismissed before
+    const dismissed = localStorage.getItem("pwa-install-dismissed")
+    if (dismissed) {
+      return
     }
 
     // Detect iOS
@@ -36,23 +31,20 @@ export function PWAInstallPrompt() {
     setIsIOS(iOS)
 
     if (iOS) {
-      // Show iOS specific prompt after 5 seconds
-      console.log("[PWA] iOS detected, showing prompt")
+      // Show iOS specific prompt after 3 seconds
       const timer = setTimeout(() => {
         setShowPrompt(true)
-      }, 5000)
+      }, 3000)
       return () => clearTimeout(timer)
     }
 
-    // Handle Android/Chrome - prompt appears immediately when available
+    // Handle Android/Chrome
     const handleBeforeInstallPrompt = (e: Event) => {
-      console.log("[PWA] beforeinstallprompt event fired")
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
-      // Show prompt after 5 seconds to not be too intrusive
       setTimeout(() => {
         setShowPrompt(true)
-      }, 5000)
+      }, 3000)
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
@@ -78,9 +70,7 @@ export function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false)
-    // Store timestamp instead of boolean for time-based re-showing
-    localStorage.setItem("pwa-install-dismissed", Date.now().toString())
-    console.log("[PWA] User dismissed install prompt")
+    localStorage.setItem("pwa-install-dismissed", "true")
   }
 
   if (!showPrompt) {

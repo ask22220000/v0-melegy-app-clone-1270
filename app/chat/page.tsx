@@ -269,35 +269,16 @@ export default function ChatPage() {
       return
     }
 
-    // For images, compress and show preview
+    // For images, show preview
     if (file.type.startsWith("image/")) {
-      try {
-        // Import compression utility dynamically
-        const { compressImage } = await import("@/lib/imageCompression")
-        
-        toast({
-          title: "جاري ضغط الصورة...",
-          description: "من فضلك انتظر",
-        })
-        
-        const compressedDataUrl = await compressImage(file, 5) // Max 5MB
-        
+      const reader = new FileReader()
+      reader.onload = (event) => {
         setAttachedImage({
-          url: compressedDataUrl,
+          url: event.target?.result as string,
           name: file.name,
         })
-        
-        toast({
-          title: "تم ضغط الصورة بنجاح",
-          description: "يمكنك الآن إرسال رسالتك",
-        })
-      } catch (error: any) {
-        toast({
-          title: "خطأ في معالجة الصورة",
-          description: error.message || "حاول مرة أخرى",
-          variant: "destructive",
-        })
       }
+      reader.readAsDataURL(file)
     } 
     // For other files, process immediately
     else {
@@ -629,20 +610,14 @@ export default function ChatPage() {
 
       const data = await response.json()
 
-      // Check if response is actually an error (not just error field existence)
-      if (!response.ok) {
+      if (!response.ok || data.error) {
         throw new Error(data.error || "API error")
-      }
-
-      // If API returned an error explicitly
-      if (data.error && !data.response) {
-        throw new Error(data.error)
       }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.response || data.error || "حصل خطأ في الرد",
+        content: data.response,
       }
 
       setMessages((prev) => [...prev, assistantMessage])

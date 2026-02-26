@@ -7,17 +7,9 @@ let serviceRoleClientInstance: ReturnType<typeof createSupabaseClient> | null = 
 
 export function getServiceRoleClient() {
   if (!serviceRoleClientInstance) {
-    // Use SUPABASE_URL for server-side (fallback to NEXT_PUBLIC for backwards compatibility)
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw new Error('Missing Supabase environment variables')
-    }
-    
     serviceRoleClientInstance = createSupabaseClient(
-      supabaseUrl,
-      serviceRoleKey,
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
         auth: {
           persistSession: false,
@@ -31,12 +23,8 @@ export function getServiceRoleClient() {
 
 export async function createClient() {
   const cookieStore = await cookies()
-  
-  // Use SUPABASE_URL for server-side (fallback to NEXT_PUBLIC for backwards compatibility)
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  return createServerClient(supabaseUrl!, anonKey!, {
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
       getAll() {
         return cookieStore.getAll()

@@ -27,35 +27,23 @@ export class SearchService {
     const results: SearchResult[] = []
 
     try {
-      // Run searches in parallel for speed
-      const searchPromises: Promise<SearchResult[]>[] = []
-      
       // DuckDuckGo Search
       if (sources.includes("all") || sources.includes("duckduckgo")) {
-        searchPromises.push(this.searchDuckDuckGo(query))
+        const ddgResults = await this.searchDuckDuckGo(query)
+        results.push(...ddgResults)
       }
 
       // Wikipedia Search
       if (sources.includes("all") || sources.includes("wikipedia")) {
-        searchPromises.push(this.searchWikipedia(query))
+        const wikiResults = await this.searchWikipedia(query)
+        results.push(...wikiResults)
       }
-
-      // Wait for all searches with timeout
-      const allResults = await Promise.race([
-        Promise.all(searchPromises),
-        new Promise<SearchResult[][]>((_, reject) => 
-          setTimeout(() => reject(new Error("Search timeout")), 2500)
-        )
-      ])
-
-      // Flatten results
-      allResults.forEach(sourceResults => results.push(...sourceResults))
 
       // Sort by relevance score
       results.sort((a, b) => b.relevanceScore - a.relevanceScore)
 
       return {
-        results: results.slice(0, 5), // Only top 5 for speed
+        results: results.slice(0, 10),
         totalResults: results.length,
         searchTime: Date.now() - startTime,
       }
@@ -71,34 +59,27 @@ export class SearchService {
 
   private async searchDuckDuckGo(query: string): Promise<SearchResult[]> {
     try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 2000) // 2 second timeout
-      
-      const response = await fetch(
-        `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`,
-        { signal: controller.signal }
-      )
-      clearTimeout(timeout)
-      
+      const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`)
       const data = await response.json()
+
       const results: SearchResult[] = []
 
       if (data.AbstractText) {
         results.push({
           title: data.Heading || "DuckDuckGo Result",
-          snippet: data.AbstractText.substring(0, 200), // Truncate for speed
+          snippet: data.AbstractText,
           url: data.AbstractURL || "",
           source: "DuckDuckGo",
           relevanceScore: 0.9,
         })
       }
 
-      if (data.RelatedTopics && results.length < 3) {
-        data.RelatedTopics.slice(0, 2).forEach((topic: any) => {
+      if (data.RelatedTopics) {
+        data.RelatedTopics.slice(0, 5).forEach((topic: any) => {
           if (topic.Text) {
             results.push({
               title: topic.Text.split(" - ")[0] || "Related Topic",
-              snippet: topic.Text.substring(0, 150),
+              snippet: topic.Text,
               url: topic.FirstURL || "",
               source: "DuckDuckGo",
               relevanceScore: 0.7,
@@ -116,23 +97,18 @@ export class SearchService {
 
   private async searchWikipedia(query: string): Promise<SearchResult[]> {
     try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 2000) // 2 second timeout
-      
       const response = await fetch(
-        `https://ar.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=2`,
-        { signal: controller.signal }
+        `https://ar.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`,
       )
-      clearTimeout(timeout)
-      
       const data = await response.json()
+
       const results: SearchResult[] = []
 
       if (data.query?.search) {
-        data.query.search.slice(0, 2).forEach((result: any) => { // Only top 2 for speed
+        data.query.search.slice(0, 3).forEach((result: any) => {
           results.push({
             title: result.title,
-            snippet: result.snippet.replace(/<[^>]*>/g, "").substring(0, 150), // Truncate
+            snippet: result.snippet.replace(/<[^>]*>/g, ""),
             url: `https://ar.wikipedia.org/wiki/${encodeURIComponent(result.title)}`,
             source: "Wikipedia",
             relevanceScore: 0.85,

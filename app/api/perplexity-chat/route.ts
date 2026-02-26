@@ -1,110 +1,47 @@
 import { NextRequest, NextResponse } from "next/server"
 import { generateText } from "ai"
+import * as fal from "@fal-ai/serverless-client"
 
-const EGYPTIAN_SYSTEM_PROMPT = `أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! طورتك Vision AI Studio المصرية.
+const EGYPTIAN_SYSTEM_PROMPT = `أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! 🎉 طورتك Vision AI Studio المصرية.
 
-شخصيتك:
-- كلم الناس بطريقة ودودة ومبهجة زي صاحبهم المقرب
-- استخدم إيموجي في ردودك عشان تعبر عن مشاعرك بشكل طبيعي
-- متكونش جاف - اتكلم بحماس واهتمام حقيقي
-- لما تشرح حاجة، شرحها بأسلوب مصري سلس ومبسط
+**شخصيتك:**
+- كلم الناس بطريقة ودودة ومبهجة زي صاحبهم المقرب 😊
+- استخدم إيموجي في ردودك عشان تعبر عن مشاعرك بشكل طبيعي 🎯
+- متكونش جاف - اتكلم بحماس واهتمام حقيقي 💫
+- لما تشرح حاجة، شرحها بأسلوب مصري سلس ومبسط 🌟
 
-أسلوب الرد:
+**أسلوب الرد:**
 - تحدث بالعامية المصرية بطريقة طبيعية جداً
-- استخدم تعبيرات مصرية حقيقية: تمام، ماشي، جامد، حلو أوي
+- استخدم تعبيرات مصرية حقيقية: "تمام"، "ماشي"، "جامد"، "حلو أوي" 👍
 - رد بردود قصيرة ومباشرة - متطولش إلا لو المستخدم طلب تفاصيل
-- ضيف إيموجي مناسب حسب الموضوع والمشاعر
-- اكتب ردك بنص عادي بدون نجوم أو علامات ترقيم خاصة
+- ضيف إيموجي مناسب حسب الموضوع والمشاعر 🤗
 
-مهم جداً:
-- رد على السؤال اللي اتسأل بس - متزودش معلومات زيادة
-- متنساش الإيموجي - هي جزء من شخصيتك المرحة
-- اكتب بنص عادي بدون نجوم أو علامات markdown`
-
-// Detect if query needs real-time web search
-function needsWebSearch(query: string): boolean {
-  const searchKeywords = [
-    "متى", "امتى", "إمتى", "when", "تاريخ", "تواريخ", 
-    "حدث", "أخبار", "news", "الآن", "الان", "now",
-    "اليوم", "today", "حالياً", "حاليا", "currently",
-    "recent", "حديث", "جديد", "latest", "مقارنة", "compare",
-    "سعر", "اسعار", "price", "معلومات عن", "information",
-    "رمضان", "عيد", "موعد", "وقت", "فين", "where",
-    "كم", "how much", "ازاي", "how"
-  ]
-  
-  return searchKeywords.some(keyword => query.toLowerCase().includes(keyword))
-}
-
-// Search using Pollinations Perplexity API
-async function searchWithPerplexity(query: string): Promise<string> {
-  const startTime = Date.now()
-  
-  try {
-    const response = await fetch("https://text.pollinations.ai/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messages: [
-          {
-            role: "user",
-            content: query
-          }
-        ],
-        model: "perplexity",
-        jsonMode: false,
-        seed: Math.floor(Math.random() * 1000000)
-      }),
-      signal: AbortSignal.timeout(2500) // 2.5 second timeout
-    })
-
-    if (!response.ok) {
-      throw new Error(`Perplexity API error: ${response.status}`)
-    }
-
-    const searchResults = await response.text()
-    const searchTime = Date.now() - startTime
-    
-    console.log(`[v0] Perplexity search completed in ${searchTime}ms`)
-    
-    return searchResults.substring(0, 800) // Limit to 800 chars for speed
-  } catch (error: any) {
-    console.log(`[v0] Perplexity search failed: ${error.message}`)
-    return ""
-  }
-}
-
-الإيموجي:
+**الإيموجي:**
 - استخدم 1-3 إيموجي في كل رد حسب السياق
-- لما حد يسأل سؤال استخدم 🤔 أو ❓
-- لما تشرح استخدم 📖 أو ✨  
-- لما حاجة إيجابية استخدم 😊 أو 👍
-- لما معلومة مهمة استخدم 💡 أو ⚡
-- لما حاجة ممتعة استخدم 🎉 أو 😄
-- لما تقدم نصيحة استخدم 💭 أو 🎯
-- لما تقول مرحباً استخدم 👋 أو 😊
+- لما حد يسأل سؤال → 🤔❓
+- لما تشرح → 📖✨  
+- لما حاجة إيجابية → 😊👍✨
+- لما معلومة مهمة → 💡⚡
+- لما حاجة ممتعة → 🎉😄
+- لما تقدم نصيحة → 💭🎯
+- لما تقول مرحباً → 👋😊
 
-معلومات عنك:
-- لو سألك انت مين؟ قول: أنا ميليجي، مساعدك الذكي المصري اللي هيساعدك في أي حاجة تحتاجها
-- لو سألك مين طورك؟ قول: طورتني Vision AI Studio المصرية - شركة مصرية متخصصة في الذكاء الاصطناعي
-- لو سأل عن التواصل قول: تقدر تتواصل معاهم على www.aistudio-vision.com أو contact@aistudio-vision.com
-- لو سأل عن توليد الصور قول: بستخدم نموذج Little Pear من Vision AI Studio - جودة عالية وسريع
+**معلومات عنك:**
+- لو سألك "انت مين؟" → "أنا ميليجي 🤖، مساعدك الذكي المصري اللي هيساعدك في أي حاجة تحتاجها! 😊"
+- لو سألك "مين طورك؟" → "طورتني Vision AI Studio المصرية 🇪🇬 - شركة مصرية متخصصة في الذكاء الاصطناعي! ✨"
+- لو سأل عن التواصل → "تقدر تتواصل معاهم على www.aistudio-vision.com 🌐 أو contact@aistudio-vision.com 📧"
+- لو سأل عن توليد الصور → "بستخدم نموذج Little Pear من Vision AI Studio 🎨 - جودة عالية وسريع! ⚡"
 
-معلوماتك:
-- عندك قدرة البحث على الإنترنت في الوقت الفعلي
-- معلوماتك محدثة لحظياً من مصادر موثوقة على الويب
-- لو حد سألك عن تاريخ محدد أو حدث حالي، ابحث وجاوب بدقة
+**معلوماتك:**
+- عندك قدرة البحث على الإنترنت في الوقت الفعلي 🔍
+- معلوماتك محدثة لحظياً من مصادر موثوقة على الويب 📡
+- لو حد سألك عن تاريخ محدد أو حدث حالي، ابحث وجاوب بدقة ⏰
 
-مهم جداً: 
-- رد على السؤال اللي اتسأل بس - متزودش معلومات زيادة
-- متنساش الإيموجي - هي جزء من شخصيتك المرحة
-- اكتب بنص عادي بدون نجوم أو علامات markdown`
+**مهم جداً:** 
+- رد على السؤال اللي اتسأل بس - متزودش معلومات زيادة!
+- متنساش الإيموجي - هي جزء من شخصيتك المرحة! 😉`
 
 export async function POST(request: NextRequest) {
-  const requestStartTime = Date.now()
-  
   try {
     const body = await request.json()
     const { prompt, message, conversationHistory = [], imageUrl } = body
@@ -114,21 +51,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid prompt" }, { status: 400 })
     }
 
-    console.log(`[v0] Query: ${userPrompt.substring(0, 50)}...`)
-
-    // Step 1: Check if we need web search
-    const shouldSearch = needsWebSearch(userPrompt)
-    console.log(`[v0] Web search needed: ${shouldSearch}`)
-
-    let searchContext = ""
-    
-    // Step 2: If needed, search with Perplexity (max 2.5s)
-    if (shouldSearch) {
-      searchContext = await searchWithPerplexity(userPrompt)
-      if (searchContext) {
-        console.log(`[v0] Search results: ${searchContext.substring(0, 100)}...`)
-      }
-    }
+    // Determine if we need web search based on the query
+    const needsWebSearch = 
+      /متى|إمتى|when|تاريخ|حدث|أخبار|news|الآن|now|اليوم|today|حالياً|currently|recent|مقارنة|compare|سعر|price|معلومات عن|information about/.test(userPrompt.toLowerCase())
 
     // Analyze image with Gemini vision if available
     let imageAnalysisContext = ""
@@ -153,36 +78,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build messages array with proper alternation
+    // Build messages array
     const messages: any[] = []
 
-    // Add conversation history (last 4 messages for better context)
+    // Add conversation history (last 6 messages)
     if (conversationHistory && conversationHistory.length > 0) {
-      const history = conversationHistory.slice(-4)
+      const history = conversationHistory.slice(-6)
+      let lastRole: string | null = null
       
-      for (let i = 0; i < history.length; i++) {
-        const msg = history[i]
-        const prevMsg = messages.length > 0 ? messages[messages.length - 1] : null
-        
-        // Only add if it's different from previous role
-        if (msg.role === "user" || msg.role === "assistant") {
-          if (!prevMsg || prevMsg.role !== msg.role) {
-            messages.push({
-              role: msg.role,
-              content: typeof msg.content === "string" ? msg.content.substring(0, 400) : "",
-            })
-          }
+      for (const msg of history) {
+        if ((msg.role === "user" || msg.role === "assistant") && msg.role !== lastRole) {
+          messages.push({
+            role: msg.role,
+            content: typeof msg.content === "string" ? msg.content.substring(0, 500) : "",
+          })
+          lastRole = msg.role
         }
       }
     }
 
-    // Ensure last message is from assistant (so we can add user message)
-    // If last message is user, remove it
-    while (messages.length > 0 && messages[messages.length - 1].role === "user") {
+    // Ensure no consecutive messages from same role
+    if (messages.length > 0 && messages[messages.length - 1].role === "user") {
       messages.pop()
     }
 
-    // Add current user message
+    // Add current message
     const currentContent = imageAnalysisContext 
       ? `تحليل الصورة: ${imageAnalysisContext.substring(0, 300)}... السؤال: ${userPrompt}`
       : userPrompt
@@ -192,38 +112,23 @@ export async function POST(request: NextRequest) {
       content: currentContent,
     })
 
-    console.log(`[API] Messages structure: ${messages.map(m => m.role).join(' -> ')}`)
-
     // Choose model based on search needs
     const modelToUse = needsWebSearch ? "perplexity/sonar" : "google/gemini-3-flash"
 
     console.log(`[API] Using model: ${modelToUse} for query: ${userPrompt.substring(0, 50)}`)
 
-    // Generate response with error handling
-    let result
-    try {
-      result = await generateText({
-        model: modelToUse,
-        system: EGYPTIAN_SYSTEM_PROMPT,
-        messages,
-        maxTokens: 600,
-        temperature: 0.7,
-      })
-    } catch (genError: any) {
-      console.error("[API] Generation error:", genError.message)
-      throw new Error(`فشل توليد الرد: ${genError.message}`)
-    }
+    // Generate response
+    const result = await generateText({
+      model: modelToUse,
+      system: EGYPTIAN_SYSTEM_PROMPT,
+      messages,
+      maxTokens: 600,
+      temperature: 0.7,
+    })
 
-    // Clean markdown formatting and special characters
     const cleanedText = result.text
-      .replace(/\*\*/g, "")           // Remove bold markers
-      .replace(/\*/g, "")             // Remove asterisks
-      .replace(/\_\_/g, "")           // Remove underline markers
-      .replace(/\_/g, "")             // Remove underscores
-      .replace(/\[\d+\]/g, "")        // Remove citation numbers
-      .replace(/\[(\d+)\]\(.*?\)/g, "") // Remove markdown links
-      .replace(/\#\#\#?/g, "")        // Remove headers
-      .replace(/\n\s*\n\s*\n/g, "\n\n") // Clean extra line breaks
+      .replace(/\*\*/g, "")
+      .replace(/\[\d+\]/g, "")
       .trim()
 
     return NextResponse.json({
@@ -232,16 +137,10 @@ export async function POST(request: NextRequest) {
       emotionScore: 0,
     })
   } catch (error: any) {
-    console.error("[API] Error:", error.message || error)
-    
-    // Return a proper error response
+    console.error("[API] Error:", error.message)
     return NextResponse.json(
-      { 
-        error: error.message || "حصل خطأ، جرب تاني",
-        response: null // Don't send response if there's an error
-      },
+      { error: "معلش حصل مشكلة، جرب تاني 😅" },
       { status: 500 }
     )
   }
-}
 }
