@@ -1,63 +1,59 @@
-import { generateText } from "ai"
+// Call Gemini via Vercel AI Gateway REST API directly
+// This is more reliable than using the AI SDK wrapper
+async function callGemini(system: string, userMessage: string, maxTokens = 200, temperature = 0.7): Promise<string> {
+  const apiKey = process.env.AI_GATEWAY_API_KEY
+  if (!apiKey) throw new Error("AI_GATEWAY_API_KEY is not set")
 
-// Translate Arabic to English using Gemini 3 Flash via Vercel AI Gateway
-export async function translateToEnglish(text: string): Promise<string> {
-  try {
-    const hasArabic = /[\u0600-\u06FF]/.test(text)
-    if (!hasArabic) {
-      return text
-    }
+  const response = await fetch("https://gateway.ai.vercel.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.0-flash-001",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: userMessage },
+      ],
+      max_tokens: maxTokens,
+      temperature,
+    }),
+  })
 
-    const result = await generateText({
-      model: "google/gemini-3-flash",
-      system:
-        "You are a translator. Translate the Arabic text to English. Keep it natural and descriptive. Return ONLY the English translation, nothing else.",
-      prompt: text,
-      maxOutputTokens: 200,
-      temperature: 0.3,
-    })
-
-    return result.text.trim() || text
-  } catch (error) {
-    console.error("[generate] Translation error:", error)
-    return text
+  if (!response.ok) {
+    const err = await response.text()
+    throw new Error(`Gemini API error ${response.status}: ${err}`)
   }
+
+  const data = await response.json()
+  return data.choices?.[0]?.message?.content?.trim() ?? ""
 }
 
-// Full pipeline: translate + enhance in one step using Gemini 3 Flash
-// Used for image GENERATION (fal-ai/flux/schnell)
+// Full pipeline: translate Arabic + engineer a professional prompt for FAL image generation
 export async function processPromptForImageGeneration(userPrompt: string): Promise<string> {
   try {
     const hasArabic = /[\u0600-\u06FF]/.test(userPrompt)
-    console.log("[v0] processPromptForImageGeneration - input:", userPrompt, "| hasArabic:", hasArabic)
 
-    const systemPrompt = hasArabic
-      ? "You are a professional translator and AI image prompt engineer specializing in photorealistic generation. Translate the Arabic text to English, then enhance it with rich visual details: lighting, composition, color palette, mood, camera angle, and photographic style. IMPORTANT: Do NOT include any text overlays or typography instructions. Return ONLY the final enhanced English prompt in under 120 words."
-      : "You are a professional AI image prompt engineer specializing in photorealistic generation. Enhance the description with rich visual details: lighting, composition, color palette, mood, camera angle, and photographic style. IMPORTANT: Do NOT include any text overlays or typography instructions. Return ONLY the enhanced English prompt in under 120 words."
+    const system = hasArabic
+      ? "You are a professional Arabic-to-English translator and AI image prompt engineer specializing in photorealistic generation. First translate the Arabic description to English exactly and faithfully, then enrich it with professional visual details: lighting, composition, color palette, mood, camera angle, and photographic style. Do NOT change the subject or scene — only translate and enhance. Do NOT include text overlays or typography instructions. Return ONLY the final enhanced English prompt in under 100 words."
+      : "You are a professional AI image prompt engineer specializing in photorealistic generation. Enhance the description with professional visual details: lighting, composition, color palette, mood, camera angle, and photographic style. Do NOT change the subject or scene. Do NOT include text overlays. Return ONLY the enhanced English prompt in under 100 words."
 
-    const result = await generateText({
-      model: "google/gemini-3-flash",
-      system: systemPrompt,
-      prompt: userPrompt,
-      maxOutputTokens: 200,
-      temperature: 0.7,
-    })
-
-    console.log("[v0] Gemini enhanced prompt:", result.text.trim())
-    return result.text.trim() || userPrompt
+    const enhanced = await callGemini(system, userPrompt, 200, 0.7)
+    return enhanced || userPrompt
   } catch (error) {
-    console.error("[v0] Gemini processPromptForImageGeneration ERROR:", error)
-    // Fallback: return original prompt so FAL still runs
+    console.error("[generate] processPromptForImageGeneration error:", error)
+    // Fallback: pass original prompt to FAL (may be Arabic, but better than wrong output)
     return userPrompt
   }
 }
 
-// Special pipeline for image EDITING: preserve person/product features (fal-ai/flux-2/turbo/edit)
+// Translate Arabic + engineer an editing prompt for FAL image editing
+// Preserves person/product facial features and scene
 export async function processPromptForImageEditing(userPrompt: string): Promise<string> {
   try {
     const hasArabic = /[\u0600-\u06FF]/.test(userPrompt)
 
-    // Check if user wants NO changes (preserve everything)
     const noChangePatterns = [
       /من غير ما تغير/i,
       /بدون ما تغير/i,
@@ -68,50 +64,56 @@ export async function processPromptForImageEditing(userPrompt: string): Promise<
       /keep everything/i,
       /no change/i,
     ]
-    const wantsNoChange = noChangePatterns.some((pattern) => pattern.test(userPrompt))
+    const wantsNoChange = noChangePatterns.some((p) => p.test(userPrompt))
 
-    const systemPrompt = hasArabic
-      ? `You are a professional translator and AI image editing prompt engineer.
-Translate the Arabic instruction to English, then produce a precise editing directive.
+    const preserveRule = wantsNoChange
+      ? "The user wants NO changes. Return exactly: \"Enhance image quality while preserving all original features, facial identity, scene, and background exactly as they are.\""
+      : "Apply ONLY what the user explicitly asks to change. Return ONLY the editing instruction in English, under 80 words."
+
+    const system = hasArabic
+      ? `You are a professional Arabic-to-English translator and AI image editing prompt engineer.
+Translate the Arabic instruction to English faithfully, then write a precise editing directive.
 
 STRICT RULES:
 1. Preserve 100% of the subject's facial features, identity, skin tone, and body proportions.
-2. Preserve the original scene, location, and background ${wantsNoChange ? "ENTIRELY — change nothing" : "unless the user explicitly asks to change it"}.
-3. Apply ONLY the changes the user explicitly requests (e.g., clothing color, accessories, lighting).
-4. Describe the desired change as a photorealistic edit instruction.
-5. Do NOT include text overlays or watermark instructions.
-${wantsNoChange ? 'Return exactly: "Enhance image quality while preserving all original features, facial identity, scene, and background exactly as they are."' : "Return ONLY the editing instruction in English, under 80 words."}`.trim()
+2. Preserve the original background and scene unless the user explicitly requests a change.
+3. ${preserveRule}
+4. Do NOT add text overlays or watermarks.`.trim()
       : `You are a professional AI image editing prompt engineer.
 
 STRICT RULES:
 1. Preserve 100% of the subject's facial features, identity, skin tone, and body proportions.
-2. Preserve the original scene, location, and background ${wantsNoChange ? "ENTIRELY — change nothing" : "unless the user explicitly asks to change it"}.
-3. Apply ONLY the changes the user explicitly requests (e.g., clothing color, accessories, lighting).
-4. Describe the desired change as a photorealistic edit instruction.
-5. Do NOT include text overlays or watermark instructions.
-${wantsNoChange ? 'Return exactly: "Enhance image quality while preserving all original features, facial identity, scene, and background exactly as they are."' : "Return ONLY the editing instruction in English, under 80 words."}`.trim()
+2. Preserve the original background and scene unless the user explicitly requests a change.
+3. ${preserveRule}
+4. Do NOT add text overlays or watermarks.`.trim()
 
-    const result = await generateText({
-      model: "google/gemini-3-flash",
-      system: systemPrompt,
-      prompt: userPrompt,
-      maxOutputTokens: 150,
-      temperature: 0.3,
-    })
+    let result = await callGemini(system, userPrompt, 150, 0.3)
+    result = result || userPrompt
 
-    let processedPrompt = result.text.trim() || userPrompt
-
-    // Ensure preservation keywords are always present
-    const hasPreservation =
-      /preserve|keep|maintain|retain/i.test(processedPrompt)
-    if (!hasPreservation) {
-      processedPrompt = `Preserve all facial features, identity, skin tone, and original scene. ${processedPrompt}`
+    // Always prepend preservation instruction for safety
+    if (!/preserve|keep|maintain|retain/i.test(result)) {
+      result = `Preserve all facial features, identity, skin tone, and original scene. ${result}`
     }
 
-    return processedPrompt
+    return result
   } catch (error) {
-    console.error("[edit] Prompt processing error:", error)
-    // Fallback: ensure preservation instruction is always included
+    console.error("[edit] processPromptForImageEditing error:", error)
     return `Preserve all facial features, identity, skin tone, and original scene. ${userPrompt}`
+  }
+}
+
+// Kept for backwards compatibility — uses same callGemini pipeline
+export async function translateToEnglish(text: string): Promise<string> {
+  const hasArabic = /[\u0600-\u06FF]/.test(text)
+  if (!hasArabic) return text
+  try {
+    return await callGemini(
+      "You are a translator. Translate the Arabic text to English accurately. Return ONLY the English translation.",
+      text,
+      200,
+      0.3,
+    )
+  } catch {
+    return text
   }
 }
