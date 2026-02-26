@@ -1,180 +1,125 @@
-import { generateText } from "ai"
+/**
+ * Prompt Enhancer — uses Groq (llama-3.3-70b) for Arabic→English translation
+ * and professional prompt engineering before sending to FAL.
+ *
+ * Groq is extremely fast and very cheap — ideal for this use case.
+ * Falls back to the raw user prompt if Groq is unavailable.
+ */
 
-// Translate Arabic to English using Gemini 3 Flash
-export async function translateToEnglish(text: string): Promise<string> {
-  try {
-    const hasArabic = /[\u0600-\u06FF]/.test(text)
-    if (!hasArabic) {
-      console.log("[v0] Text is already in English, skipping translation")
-      return text
-    }
+const NO_CHANGE_PATTERNS = [
+  /من غير ما تغير/i,
+  /بدون ما تغير/i,
+  /ما تغيرش/i,
+  /متغيرش/i,
+  /without chang/i,
+  /don't change/i,
+  /keep everything/i,
+  /no change/i,
+]
 
-    console.log("[v0] Translating Arabic text to English using Gemini 3 Flash...")
-    const result = await generateText({
-      model: "google/gemini-3-flash",
+async function callGroq(systemPrompt: string, userMessage: string): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) throw new Error("GROQ_API_KEY is not set")
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
       messages: [
-        {
-          role: "system",
-          content: "You are a translator. Translate the Arabic text to English. Keep it natural and descriptive. Return ONLY the English translation, nothing else.",
-        },
-        {
-          role: "user",
-          content: text,
-        },
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
       ],
-      maxTokens: 200,
-      temperature: 0.3,
-    })
+      temperature: 0.4,
+      max_tokens: 300,
+    }),
+  })
 
-    const translated = result.text.trim()
-    console.log("[v0] Translation result:", translated.substring(0, 100))
-    return translated
-  } catch (error) {
-    console.error("[v0] Translation error:", error)
-    return text
+  if (!response.ok) {
+    const err = await response.text()
+    throw new Error(`Groq error ${response.status}: ${err}`)
   }
+
+  const data = await response.json()
+  return data.choices?.[0]?.message?.content?.trim() ?? ""
 }
 
-// Enhance prompt for better AI image generation using Gemini 3 Flash
-export async function enhancePromptForImageGeneration(prompt: string): Promise<string> {
-  try {
-    console.log("[v0] Enhancing prompt with Gemini 3 Flash...")
-    const result = await generateText({
-      model: "google/gemini-3-flash",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional Prompt Engineer specialized in AI image generation. Enhance the given description with professional visual details and artistic direction. Keep it concise (under 100 words) and in English. Focus on: lighting, composition, style, colors, mood, and technical quality.",
-        },
-        {
-          role: "user",
-          content: `Enhance this image prompt: ${prompt}`,
-        },
-      ],
-      maxTokens: 200,
-      temperature: 0.7,
-    })
-
-    const enhanced = result.text.trim() || prompt
-    console.log("[v0] Enhanced prompt:", enhanced.substring(0, 100))
-    return enhanced
-  } catch (error) {
-    console.error("[v0] Enhancement error:", error)
-    return prompt
-  }
-}
-
-// Full pipeline: translate + enhance in one step using Gemini 3 Flash
+/**
+ * For image GENERATION via fal-ai/flux/schnell.
+ * Translates Arabic Egyptian dialect to English and engineers a professional prompt.
+ */
 export async function processPromptForImageGeneration(userPrompt: string): Promise<string> {
-  console.log("[v0] Processing prompt:", userPrompt.substring(0, 50))
-  
+  const hasArabic = /[\u0600-\u06FF]/.test(userPrompt)
+
+  const system = `You are a professional prompt engineer for AI image generation (Flux model).
+Your job:
+1. If the text is Arabic (including Egyptian dialect), translate it to English faithfully and completely — do NOT omit any detail.
+2. Enrich the translation with professional visual details: lighting, composition, color palette, mood, camera angle, photographic style.
+3. Do NOT change or remove any subject, person, object, or scene the user described.
+4. Do NOT add text overlays, watermarks, or typography.
+5. Return ONLY the final English prompt, under 120 words. No explanations.`
+
+  const userMsg = hasArabic
+    ? `Translate and engineer a professional image prompt for: "${userPrompt}"`
+    : `Engineer a professional image prompt for: "${userPrompt}"`
+
   try {
-    const hasArabic = /[\u0600-\u06FF]/.test(userPrompt)
-    const systemPrompt = hasArabic
-      ? "You are a professional translator and AI image prompt engineer. First translate the Arabic text to English, then enhance it with professional visual details (lighting, composition, style, colors, mood). IMPORTANT: Remove any instructions to write or add text/words on the image. Focus ONLY on visual elements, not text overlays. Return ONLY the final enhanced English prompt in under 100 words."
-      : "You are a professional AI image prompt engineer. Enhance the description with professional visual details (lighting, composition, style, colors, mood). IMPORTANT: Remove any instructions to write or add text/words on the image. Focus ONLY on visual elements, not text overlays. Return ONLY the enhanced prompt in under 100 words."
-
-    console.log("[v0] Processing with Gemini 3 Flash (translate + enhance)...")
-    const result = await generateText({
-      model: "google/gemini-3-flash",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-      maxTokens: 200,
-      temperature: 0.7,
-    })
-
-    const processedPrompt = result.text.trim() || userPrompt
-    console.log("[v0] Final processed prompt:", processedPrompt.substring(0, 100))
-    return processedPrompt
+    const result = await callGroq(system, userMsg)
+    return result || userPrompt
   } catch (error) {
-    console.error("[v0] Processing error:", error)
+    console.error("[prompt-enhancer] Groq generation error:", error)
+    // Fallback: send as-is — flux handles some Arabic
     return userPrompt
   }
 }
 
-// Special pipeline for image editing: preserve character features and scene
+/**
+ * For image EDITING via fal-ai/flux-2/turbo/edit.
+ * Translates + builds an edit instruction that preserves subject identity.
+ */
 export async function processPromptForImageEditing(userPrompt: string): Promise<string> {
-  console.log("[v0] Processing edit prompt:", userPrompt.substring(0, 50))
-  
+  const wantsNoChange = NO_CHANGE_PATTERNS.some((p) => p.test(userPrompt))
+  if (wantsNoChange) {
+    return "Enhance image quality and sharpness while preserving all original features, facial identity, scene, and background exactly as they are. No other modifications."
+  }
+
+  const hasArabic = /[\u0600-\u06FF]/.test(userPrompt)
+
+  const system = `You are a professional prompt engineer for AI image editing (Flux model).
+Your job:
+1. If the text is Arabic (including Egyptian dialect), translate it to English faithfully.
+2. Write a precise editing instruction that applies ONLY what the user asks to change.
+3. ALWAYS preserve: facial features, skin tone, body proportions, identity, and original background — unless the user explicitly asks to change them.
+4. Do NOT add text overlays or watermarks.
+5. Start your response with: "Preserve all facial features, skin tone, and original background." then describe the change.
+6. Return ONLY the instruction in English, under 80 words. No explanations.`
+
+  const userMsg = hasArabic
+    ? `Translate and write an image editing instruction for: "${userPrompt}"`
+    : `Write an image editing instruction for: "${userPrompt}"`
+
   try {
-    const hasArabic = /[\u0600-\u06FF]/.test(userPrompt)
-    
-    // Check if user wants NO changes (preserve everything)
-    const noChangePatterns = [
-      /من غير ما تغير/i,
-      /بدون ما تغير/i,
-      /ما تغيرش/i,
-      /متغيرش/i,
-      /without chang/i,
-      /don't change/i,
-      /keep everything/i,
-      /no change/i,
-    ]
-    
-    const wantsNoChange = noChangePatterns.some(pattern => pattern.test(userPrompt))
-    
-    const systemPrompt = hasArabic
-      ? `You are a professional translator and AI image editing prompt engineer. First translate the Arabic text to English, then create an editing instruction.
-
-CRITICAL RULES:
-1. You MUST preserve 100% of the person's facial features, identity, and characteristics
-2. You MUST preserve the original scene, location, and background ${wantsNoChange ? 'COMPLETELY - DO NOT modify anything' : 'unless explicitly requested to change'}
-3. Only modify what the user specifically asks to change (clothing, accessories, lighting, etc.)
-4. Focus on subtle enhancements while maintaining the original identity and scene
-5. Remove any instructions to add text/words on the image
-
-${wantsNoChange ? 'USER WANTS NO CHANGES - Return: "Enhance image quality while preserving all original features, facial characteristics, scene, and background exactly as they are"' : 'Return ONLY the editing instruction in English, under 80 words.'}`.trim()
-      : `You are a professional AI image editing prompt engineer.
-
-CRITICAL RULES:
-1. You MUST preserve 100% of the person's facial features, identity, and characteristics
-2. You MUST preserve the original scene, location, and background ${wantsNoChange ? 'COMPLETELY - DO NOT modify anything' : 'unless explicitly requested to change'}
-3. Only modify what the user specifically asks to change (clothing, accessories, lighting, etc.)
-4. Focus on subtle enhancements while maintaining the original identity and scene
-5. Remove any instructions to add text/words on the image
-
-${wantsNoChange ? 'USER WANTS NO CHANGES - Return: "Enhance image quality while preserving all original features, facial characteristics, scene, and background exactly as they are"' : 'Return ONLY the editing instruction in English, under 80 words.'}`.trim()
-
-    console.log("[v0] Processing edit with Gemini 3 Flash (preserving features)...")
-    const result = await generateText({
-      model: "google/gemini-3-flash",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-      maxTokens: 150,
-      temperature: 0.3, // Lower temperature for more consistent preservation
-    })
-
-    let processedPrompt = result.text.trim() || userPrompt
-    
-    // Force preservation keywords if not present
-    if (!processedPrompt.toLowerCase().includes('preserve') && 
-        !processedPrompt.toLowerCase().includes('keep') &&
-        !processedPrompt.toLowerCase().includes('maintain')) {
-      processedPrompt = `Preserve all facial features and identity. ${processedPrompt}`
-    }
-    
-    console.log("[v0] Final edit prompt:", processedPrompt.substring(0, 100))
-    return processedPrompt
+    const result = await callGroq(system, userMsg)
+    return result || `Preserve all facial features, skin tone, and original background. ${userPrompt}`
   } catch (error) {
-    console.error("[v0] Edit processing error:", error)
-    // Fallback: add preservation instruction manually
-    return `Preserve all facial features, identity, and original scene. ${userPrompt}`
+    console.error("[prompt-enhancer] Groq editing error:", error)
+    return `Preserve all facial features, skin tone, and original background. ${userPrompt}`
+  }
+}
+
+/** Backwards compatibility */
+export async function translateToEnglish(text: string): Promise<string> {
+  const hasArabic = /[\u0600-\u06FF]/.test(text)
+  if (!hasArabic) return text
+  try {
+    return await callGroq(
+      "Translate Arabic text (including Egyptian dialect) to English accurately. Return ONLY the translation.",
+      text,
+    )
+  } catch {
+    return text
   }
 }
