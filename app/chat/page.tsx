@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { DesignViewer } from "@/components/design-viewer"
-import { UserIdModal } from "@/components/user-id-modal"
 import Link from "next/link"
 import { UsageIndicator } from "@/components/usage-indicator"
 import { canSendMessage, canGenerateImage, incrementMessageUsage, incrementImageUsage } from "@/lib/usage-tracker"
@@ -82,9 +81,6 @@ export default function ChatPage() {
   const [showFunctionsMenu, setShowFunctionsMenu] = useState(false)
   const [showUsageCard, setShowUsageCard] = useState(true)
   const [theme, setTheme] = useState<"light" | "dark">("dark")
-  const [mlgUserId, setMlgUserId] = useState<string | null>(null)
-  const [mlgPlan, setMlgPlan] = useState<string>("free")
-  const [showUserModal, setShowUserModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const functionsList = [
@@ -120,35 +116,6 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
-
-  // Initialize user: check localStorage for existing ID
-  useEffect(() => {
-    const storedId = localStorage.getItem("mlg_user_id")
-    const storedPlan = localStorage.getItem("mlg_plan") || "free"
-    if (storedId) {
-      // Verify it still exists on server
-      fetch(`/api/user?id=${storedId}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.user) {
-            setMlgUserId(data.user.mlg_user_id)
-            setMlgPlan(data.user.plan)
-          } else {
-            // ID invalid, show modal
-            localStorage.removeItem("mlg_user_id")
-            localStorage.removeItem("mlg_plan")
-            setShowUserModal(true)
-          }
-        })
-        .catch(() => {
-          // On error keep stored values
-          setMlgUserId(storedId)
-          setMlgPlan(storedPlan)
-        })
-    } else {
-      setShowUserModal(true)
-    }
-  }, [])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null
@@ -700,23 +667,26 @@ export default function ChatPage() {
   }
 
   const speakText = async (text: string, messageId: string) => {
-    // Stop if already playing this message
     if (playingAudio === messageId) {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
       if (currentAudioRef.current) {
         currentAudioRef.current.pause()
-        currentAudioRef.current.src = ""
         currentAudioRef.current = null
       }
       setPlayingAudio(null)
       return
     }
 
-    // Stop any currently playing audio
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+    }
     if (currentAudioRef.current) {
       currentAudioRef.current.pause()
-      currentAudioRef.current.src = ""
       currentAudioRef.current = null
     }
+
     setPlayingAudio(messageId)
 
     try {
@@ -726,49 +696,34 @@ export default function ChatPage() {
         body: JSON.stringify({ text }),
       })
 
-      const contentType = response.headers.get("content-type") || ""
+      const contentType = response.headers.get("content-type")
 
-      if (!contentType.includes("audio")) {
-        // API returned an error JSON
-        const json = await response.json().catch(() => ({}))
-        throw new Error(json.error || "ElevenLabs did not return audio")
-      }
+      if (contentType?.includes("audio")) {
+        const audioBlob = await response.blob()
+        const audioUrl = URL.createObjectURL(audioBlob)
+        const audio = new Audio(audioUrl)
+        currentAudioRef.current = audio
 
-      const audioBlob = await response.blob()
-      const audioUrl = URL.createObjectURL(audioBlob)
+        audio.onended = () => {
+          setPlayingAudio(null)
+          URL.revokeObjectURL(audioUrl)
+          currentAudioRef.current = null
+        }
 
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause()
-        currentAudioRef.current = null
-      }
+        audio.onerror = () => {
+          setPlayingAudio(null)
+          URL.revokeObjectURL(audioUrl)
+          currentAudioRef.current = null
+          fallbackToWebSpeech(text, messageId)
+        }
 
-      const audio = new Audio(audioUrl)
-      currentAudioRef.current = audio
-
-      audio.onended = () => {
-        setPlayingAudio(null)
-        URL.revokeObjectURL(audioUrl)
-        currentAudioRef.current = null
-      }
-
-      audio.onerror = () => {
-        setPlayingAudio(null)
-        URL.revokeObjectURL(audioUrl)
-        currentAudioRef.current = null
-      }
-
-      try {
         await audio.play()
-      } catch (playErr: any) {
-        console.error("[v0] play() error:", playErr?.message)
-        setPlayingAudio(null)
-        URL.revokeObjectURL(audioUrl)
-        currentAudioRef.current = null
+      } else {
+        fallbackToWebSpeech(text, messageId)
       }
-    } catch (error: any) {
-      console.error("[v0] TTS fetch error:", error?.message)
-      setPlayingAudio(null)
-      currentAudioRef.current = null
+    } catch (error) {
+      console.error("[v0] TTS error:", error)
+      fallbackToWebSpeech(text, messageId)
     }
   }
 
@@ -890,16 +845,9 @@ export default function ChatPage() {
     }
   }
 
-  const handleUserReady = (userId: string, plan: string, isNew: boolean) => {
-    setMlgUserId(userId)
-    setMlgPlan(plan)
-    setShowUserModal(false)
-  }
-
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl" style={{ backgroundColor: 'hsl(var(--background))' }}>
       <Toaster />
-      {showUserModal && <UserIdModal onUserReady={handleUserReady} />}
       
       <div className="fixed top-0 left-0 right-0 z-[100] bg-background border-b border-border py-2 md:py-4" style={{ backgroundColor: 'hsl(var(--background))' }}>
         <div className="flex items-center justify-between px-2 sm:px-4 md:px-6">
