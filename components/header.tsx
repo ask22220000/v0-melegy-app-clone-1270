@@ -1,6 +1,6 @@
 "use client"
 
-import { MessageSquare, Home, Moon, Sun } from "lucide-react"
+import { MessageSquare, Home, Moon, Sun, Languages } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useApp } from "@/lib/contexts/AppContext"
 import Link from "next/link"
@@ -13,7 +13,7 @@ type HeaderProps = {
 }
 
 export function Header({ showChatHistory = false, onChatHistoryClick, showHomeButton = false }: HeaderProps) {
-  const { translations } = useApp()
+  const { translations, language, setLanguage } = useApp()
   const [theme, setTheme] = useState<"light" | "dark">("dark")
   const [mounted, setMounted] = useState(false)
 
@@ -31,6 +31,10 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
     document.documentElement.classList.toggle("dark", newTheme === "dark")
   }
 
+  const toggleLanguage = () => {
+    setLanguage(language === "ar" ? "en" : "ar")
+  }
+
   if (!mounted) return null
 
   return (
@@ -42,9 +46,20 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
             size="sm"
             onClick={toggleTheme}
             className="bg-card backdrop-blur-md border-border/50 flex items-center gap-2 text-foreground hover:text-foreground"
-            aria-label={theme === "dark" ? "التبديل للوضع المضيء" : "التبديل للوضع المظلم"}
+            aria-label={theme === "dark" ? "التبديل للوضع المضيء" : "Switch to light mode"}
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleLanguage}
+            className="bg-card backdrop-blur-md border-border/50 flex items-center gap-1.5 text-foreground hover:text-foreground font-bold min-w-[52px]"
+            aria-label={language === "ar" ? "Switch to English" : "التبديل للعربية"}
+          >
+            <Languages className="h-4 w-4 shrink-0" />
+            <span className="text-xs">{translations.languageToggle}</span>
           </Button>
 
           {showHomeButton && (

@@ -59,7 +59,7 @@ export function Footer() {
         <div className="text-center">
           <div className="flex gap-4 mb-2 justify-center">
             <Link href="/pricing" className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-bold">
-              الأسعار والباقات
+              {translations.footerPricing}
             </Link>
           </div>
           <p className="text-slate-400 text-sm">
