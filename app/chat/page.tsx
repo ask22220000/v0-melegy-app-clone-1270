@@ -736,9 +736,23 @@ export default function ChatPage() {
 
       const audioBlob = await response.blob()
       const audioUrl = URL.createObjectURL(audioBlob)
+
+      // Clean up previous
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause()
+        currentAudioRef.current = null
+      }
+
       const audio = new Audio()
-      audio.src = audioUrl
+      audio.preload = "auto"
       currentAudioRef.current = audio
+
+      await new Promise<void>((resolve, reject) => {
+        audio.oncanplaythrough = () => resolve()
+        audio.onerror = () => reject(new Error("Audio load error"))
+        audio.src = audioUrl
+        audio.load()
+      })
 
       audio.onended = () => {
         setPlayingAudio(null)
@@ -746,20 +760,11 @@ export default function ChatPage() {
         currentAudioRef.current = null
       }
 
-      audio.onerror = (e) => {
-        console.error("[v0] Audio playback error:", e)
-        setPlayingAudio(null)
-        URL.revokeObjectURL(audioUrl)
-        currentAudioRef.current = null
-      }
-
       await audio.play()
     } catch (error: any) {
-      console.error("[v0] TTS speakText error:", error?.message)
+      console.error("[v0] TTS error:", error?.message)
       setPlayingAudio(null)
-      if (currentAudioRef.current) {
-        currentAudioRef.current = null
-      }
+      currentAudioRef.current = null
     }
   }
 
