@@ -48,11 +48,11 @@ export function Hero() {
       </div>
 
       <div className="mt-8 flex flex-col items-center gap-3">
-        <p className="text-lg text-white/80 font-medium text-center max-w-3xl" dir="rtl">
-          تخيل يكون عندك أشطر موظف في مصر؛ بيكتب، ويرسم، ويحلل، وبيفهمك من كلمة.. ومبيطلبش منك مرتب كبير! .. دلوقتي امتلك ذكاء ميليجي &apos;فول أوبشن&apos; في باقة VIP.
+        <p className="text-lg text-white/80 font-medium text-center max-w-3xl" dir={language === "ar" ? "rtl" : "ltr"}>
+          {translations.heroCta}
         </p>
-        <p className="text-base text-white/70 text-center" dir="rtl">
-          و استمتع بكل مميزات ميليجي بدون حدود.
+        <p className="text-base text-white/70 text-center" dir={language === "ar" ? "rtl" : "ltr"}>
+          {translations.heroCtaSub}
         </p>
         <ArrowDown className="h-8 w-8 text-cyan-400 animate-bounce drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
       </div>

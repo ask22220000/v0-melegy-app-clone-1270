@@ -18,12 +18,17 @@ const translations = {
     // Header
     history: "السجل",
     home: "الرئيسية",
+    languageToggle: "EN",
     // Hero
     heroTitle: "Melegy",
     heroSubtitle: "مساعدك الذكي المتطور",
     heroVersion: "(v2.3)",
     heroDescription: "مساعد ذكاء اصطناعي متطور يوفر لك إجابات دقيقة، بحث متقدم، وتوليد محتوى إبداعي",
     startChat: "ابدأ المحادثة 🧠",
+    heroCta: "تخيل يكون عندك أشطر موظف في مصر؛ بيكتب، ويرسم، ويحلل، وبيفهمك من كلمة.. ومبيطلبش منك مرتب كبير! .. دلوقتي امتلك ذكاء ميليجي 'فول أوبشن' في باقة VIP.",
+    heroCtaSub: "و استمتع بكل مميزات ميليجي بدون حدود.",
+    // Pricing link
+    pricingLink: "شوف الأسعار والباقات",
     // Features
     features: {
       imageAnalysis: { title: "تحليل الصور", description: "فهم وتحليل الصور بذكاء متقدم" },
@@ -40,22 +45,52 @@ const translations = {
     madeInEgypt: "صنع في مصر 🇪🇬",
     whatsappSupport: "للدعم على WhatsApp",
     whatsappMessage: "مرحباً! كيف يمكننا مساعدتك؟",
+    footerPricing: "الأسعار والباقات",
     // Chat page
     chatHistory: "سجل المحادثات",
     deleteAll: "حذف الكل",
     loadChat: "تحميل",
     deleteChat: "حذف",
-    noHistory: "لا يوجد محادثات سابقة",
+    noHistory: "لا توجد محادثات سابقة",
     typePlaceholder: "اكتب رسالتك هنا...",
     send: "إرسال",
     copy: "نسخ",
     copied: "تم النسخ!",
     generating: "جاري التوليد...",
+    save: "حفظ",
+    history2: "السجل",
+    listen: "استمع",
+    stop: "إيقاف",
+    generatingImage: "جاري إنشاء الصورة...",
+    analyzingImage: "جاري تحليل الصورة...",
+    downloadExcel: "تحميل Excel",
+    welcomeMessage: "أهلاً بيك في ميليجي! 👋 أنا مساعدك الذكي. كيف أقدر أساعدك النهاردة؟",
+    upgradeTitle: "وصلت للحد المجاني!",
+    upgradeDesc: "ترقى لباقة مدفوعة واستمتع بمميزات أكثر ورسائل وصور غير محدودة!",
+    upgradeBtn: "ترقى الآن",
+    cancelBtn: "إلغاء",
+    errorMsg: "عذراً، حصل خطأ. جرب تاني.",
+    savedTitle: "تم الحفظ",
+    savedDesc: "تم حفظ المحادثة بنجاح",
+    emptyConvTitle: "محادثة فارغة",
+    emptyConvDesc: "لا توجد محادثة لحفظها",
+    copiedTitle: "تم النسخ",
+    copiedDesc: "تم نسخ النص بنجاح",
+    // Functions menu
+    fn_image: "اعمل صورة",
+    fn_editImage: "إرفاق و تعديل صورة",
+    fn_attachFile: "إرفاق ملف",
+    fn_write: "اكتب نص",
+    fn_excel: "عاوز شيت Excel",
+    fn_idea: "اقترح فكرة",
+    fn_help: "ساعدني",
+    fn_chat: "دردشة",
   },
   en: {
     // Header
     history: "History",
     home: "Home",
+    languageToggle: "عر",
     // Hero
     heroTitle: "Melegy",
     heroSubtitle: "Your Advanced Smart Assistant",
@@ -63,6 +98,10 @@ const translations = {
     heroDescription:
       "An advanced AI assistant providing accurate answers, advanced search, and creative content generation",
     startChat: "Start Chat 🧠",
+    heroCta: "Imagine having the smartest assistant at your fingertips — writing, designing, analyzing, and understanding you instantly.. without a huge salary! Get Melegy's full power with the VIP plan.",
+    heroCtaSub: "Enjoy all Melegy features without limits.",
+    // Pricing link
+    pricingLink: "View Plans & Pricing",
     // Features
     features: {
       imageAnalysis: {
@@ -82,6 +121,7 @@ const translations = {
     madeInEgypt: "Made in Egypt 🇪🇬",
     whatsappSupport: "WhatsApp Support",
     whatsappMessage: "Hello! How can we help you?",
+    footerPricing: "Plans & Pricing",
     // Chat page
     chatHistory: "Chat History",
     deleteAll: "Delete All",
@@ -93,6 +133,34 @@ const translations = {
     copy: "Copy",
     copied: "Copied!",
     generating: "Generating...",
+    save: "Save",
+    history2: "History",
+    listen: "Listen",
+    stop: "Stop",
+    generatingImage: "Generating image...",
+    analyzingImage: "Analyzing image...",
+    downloadExcel: "Download Excel",
+    welcomeMessage: "Welcome to Melegy! 👋 I'm your smart assistant. How can I help you today?",
+    upgradeTitle: "Free limit reached!",
+    upgradeDesc: "Upgrade to a paid plan and enjoy more features with unlimited messages and images!",
+    upgradeBtn: "Upgrade Now",
+    cancelBtn: "Cancel",
+    errorMsg: "Sorry, an error occurred. Please try again.",
+    savedTitle: "Saved",
+    savedDesc: "Conversation saved successfully",
+    emptyConvTitle: "Empty conversation",
+    emptyConvDesc: "No conversation to save",
+    copiedTitle: "Copied",
+    copiedDesc: "Text copied successfully",
+    // Functions menu
+    fn_image: "Generate Image",
+    fn_editImage: "Attach & Edit Image",
+    fn_attachFile: "Attach File",
+    fn_write: "Write Text",
+    fn_excel: "Create Excel Sheet",
+    fn_idea: "Suggest an Idea",
+    fn_help: "Help Me",
+    fn_chat: "Chat",
   },
 }
 
@@ -111,8 +179,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (savedLang) setLanguageState(savedLang)
       if (savedTheme) setThemeState(savedTheme)
-    } catch (error) {
-      console.error("[v0] Error loading from localStorage:", error)
+    } catch {
+      // silently ignore localStorage errors
     }
   }, [])
 
@@ -132,22 +200,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("language", lang)
-      } catch (error) {
-        console.error("[v0] Error saving language:", error)
-      }
+      try { localStorage.setItem("language", lang) } catch { /* ignore */ }
     }
   }
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme)
     if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("theme", newTheme)
-      } catch (error) {
-        console.error("[v0] Error saving theme:", error)
-      }
+      try { localStorage.setItem("theme", newTheme) } catch { /* ignore */ }
     }
   }
 

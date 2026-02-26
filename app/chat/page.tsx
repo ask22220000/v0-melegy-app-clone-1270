@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useApp } from "@/lib/contexts/AppContext"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
@@ -33,6 +34,7 @@ import {
   Heart,
   MessageSquare,
   FileSpreadsheet,
+  Languages,
 } from "lucide-react"
 
 interface Message {
@@ -60,6 +62,8 @@ interface ChatHistory {
 }
 
 export default function ChatPage() {
+  const { translations, language, setLanguage } = useApp()
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -88,14 +92,14 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const functionsList = [
-    { id: "image", label: "اعمل صورة", icon: Image, prompt: "اعملي صورة " },
-    { id: "edit-image", label: "إرفاق و تعديل صورة", icon: Image, action: "attach-edit-image" },
-    { id: "attach-file", label: "إرفاق ملف", icon: Paperclip, action: "attach-file" },
-    { id: "write", label: "اكتب نص", icon: FileText, prompt: "اكتبلي " },
-    { id: "excel", label: "عاوز شيت Excel", icon: FileSpreadsheet, prompt: "اعملي شيت Excel ل " },
-    { id: "idea", label: "اقترح فكرة", icon: Lightbulb, prompt: "اقترحلي فكرة عن " },
-    { id: "help", label: "ساعدني", icon: Heart, prompt: "ساعدني في " },
-    { id: "chat", label: "دردشة", icon: MessageSquare, prompt: "عايز اتكلم معاك عن " },
+    { id: "image", label: translations.fn_image, icon: Image, prompt: language === "ar" ? "اعملي صورة " : "Generate an image of " },
+    { id: "edit-image", label: translations.fn_editImage, icon: Image, action: "attach-edit-image" },
+    { id: "attach-file", label: translations.fn_attachFile, icon: Paperclip, action: "attach-file" },
+    { id: "write", label: translations.fn_write, icon: FileText, prompt: language === "ar" ? "اكتبلي " : "Write for me " },
+    { id: "excel", label: translations.fn_excel, icon: FileSpreadsheet, prompt: language === "ar" ? "اعملي شيت Excel ل " : "Create an Excel sheet for " },
+    { id: "idea", label: translations.fn_idea, icon: Lightbulb, prompt: language === "ar" ? "اقترحلي فكرة عن " : "Suggest an idea about " },
+    { id: "help", label: translations.fn_help, icon: Heart, prompt: language === "ar" ? "ساعدني في " : "Help me with " },
+    { id: "chat", label: translations.fn_chat, icon: MessageSquare, prompt: language === "ar" ? "عايز اتكلم معاك عن " : "I want to talk about " },
   ]
 
   const handleFunctionSelect = (func: any) => {
@@ -897,7 +901,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col" dir="rtl" style={{ backgroundColor: 'hsl(var(--background))' }}>
+    <div className="min-h-screen bg-background flex flex-col" dir={language === "ar" ? "rtl" : "ltr"} style={{ backgroundColor: 'hsl(var(--background))' }}>
       <Toaster />
       {showUserModal && <UserIdModal onUserReady={handleUserReady} />}
       
@@ -907,18 +911,18 @@ export default function ChatPage() {
             <button
               onClick={saveCurrentConversation}
               className="bg-card border-2 border-border text-foreground px-2 py-1.5 sm:px-3 sm:py-2 md:px-4 rounded-lg transition-all duration-300 hover:bg-accent hover:border-accent-foreground/50 hover:shadow-lg hover:scale-105 flex items-center gap-1 sm:gap-1.5 cursor-pointer font-medium text-xs sm:text-sm"
-              aria-label="حفظ المحادثة"
+              aria-label={translations.save}
             >
               <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">حفظ</span>
+              <span className="hidden xs:inline">{translations.save}</span>
             </button>
             <button
               onClick={() => setShowChatHistory(!showChatHistory)}
               className="bg-card border-2 border-border text-foreground px-2 py-1.5 sm:px-3 sm:py-2 md:px-4 rounded-lg transition-all duration-300 hover:bg-accent hover:border-accent-foreground/50 hover:shadow-lg hover:scale-105 flex items-center gap-1 sm:gap-1.5 cursor-pointer font-medium text-xs sm:text-sm"
-              aria-label="سجل المحادثات"
+              aria-label={translations.chatHistory}
             >
               <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">السجل</span>
+              <span className="hidden xs:inline">{translations.history2}</span>
             </button>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
@@ -927,14 +931,22 @@ export default function ChatPage() {
               className="bg-card border-2 border-border text-foreground px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg transition-all duration-300 hover:bg-accent hover:border-accent-foreground/50 hover:shadow-lg hover:scale-105 flex items-center"
             >
               <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">الرئيسية</span>
+              <span className="hidden xs:inline">{translations.home}</span>
             </Link>
             <button
               onClick={toggleTheme}
               className="bg-card border-2 border-border text-foreground px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg transition-all duration-300 hover:bg-accent hover:border-accent-foreground/50 hover:shadow-lg hover:scale-105 flex items-center cursor-pointer"
-              aria-label="تغيير المظهر"
+              aria-label="Toggle theme"
             >
               {theme === "dark" ? <Sun className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Moon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+            </button>
+            <button
+              onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
+              className="bg-card border-2 border-border text-foreground px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg transition-all duration-300 hover:bg-accent hover:border-accent-foreground/50 hover:shadow-lg hover:scale-105 flex items-center gap-1 cursor-pointer font-bold text-xs sm:text-sm"
+              aria-label="Toggle language"
+            >
+              <Languages className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">{translations.languageToggle}</span>
             </button>
             <button
               onClick={() => setShowUsageCard(!showUsageCard)}
@@ -980,13 +992,13 @@ export default function ChatPage() {
       {showChatHistory && (
         <div className="absolute top-16 left-4 z-50 w-72 max-h-96 overflow-y-auto bg-gray-900 border border-gray-700 rounded-lg shadow-lg">
           <div className="p-3 border-b border-gray-700 flex justify-between items-center">
-            <span className="font-bold">سجل المحادثات</span>
+            <span className="font-bold">{translations.chatHistory}</span>
             <Button variant="ghost" size="sm" onClick={() => setShowChatHistory(false)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
           {chatHistories.length === 0 ? (
-            <p className="p-4 text-gray-500 text-center">لا توجد محادثات سابقة</p>
+            <p className="p-4 text-gray-500 text-center">{translations.noHistory}</p>
           ) : (
             chatHistories.map((chat) => (
               <div
@@ -1074,8 +1086,8 @@ export default function ChatPage() {
                       </tbody>
                     </table>
                   </div>
-                  <Button size="sm" className="mt-2" onClick={() => downloadExcel(message.excelData!)}>
-                    <Download className="h-4 w-4 mr-1" /> تحميل Excel
+                    <Button size="sm" className="mt-2" onClick={() => downloadExcel(message.excelData!)}>
+                    <Download className="h-4 w-4 mr-1" /> {translations.downloadExcel}
                   </Button>
                 </div>
               )}
@@ -1088,7 +1100,7 @@ export default function ChatPage() {
                     className="flex items-center gap-1 text-gray-400 hover:text-white"
                   >
                     {playingAudio === message.id ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                    {playingAudio === message.id ? "إيقاف" : "استمع"}
+                    {playingAudio === message.id ? translations.stop : translations.listen}
                   </Button>
                   <Button
                     size="sm"
@@ -1096,7 +1108,7 @@ export default function ChatPage() {
                     onClick={() => copyText(message.content)}
                     className="flex items-center gap-1 text-gray-400 hover:text-white"
                   >
-                    <Copy className="h-4 w-4" /> نسخ
+                    <Copy className="h-4 w-4" /> {translations.copy}
                   </Button>
                 </div>
               )}
@@ -1115,7 +1127,7 @@ export default function ChatPage() {
                     <span className="text-2xl font-bold text-blue-500">{countdown}</span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-400">جاري إنشاء الصورة...</p>
+                <p className="text-sm text-gray-400">{translations.generatingImage}</p>
               </div>
             </Card>
           </div>
@@ -1126,7 +1138,7 @@ export default function ChatPage() {
             <Card className="max-w-[80%] p-6 bg-gray-800 border-gray-700">
               <div className="flex flex-col items-center gap-4">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                <p className="text-sm text-gray-400">جاري تحليل الصورة...</p>
+                <p className="text-sm text-gray-400">{translations.analyzingImage}</p>
               </div>
             </Card>
           </div>
@@ -1171,10 +1183,10 @@ export default function ChatPage() {
                 handleSubmit(e as any)
               }
             }}
-            placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-card border-border text-right text-xs font-bold resize-none min-h-[44px] max-h-[200px] overflow-y-auto pr-3"
+            placeholder={translations.typePlaceholder}
+            className="flex-1 bg-card border-border text-xs font-bold resize-none min-h-[44px] max-h-[200px] overflow-y-auto pr-3"
             style={{ fontFamily: "Cairo, sans-serif", fontSize: "12px", fontWeight: "bold" }}
-            dir="rtl"
+            dir={language === "ar" ? "rtl" : "ltr"}
             rows={1}
           />
           <div className="relative shrink-0">
@@ -1231,9 +1243,9 @@ export default function ChatPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold mb-2 text-white">وصلت للحد المجاني!</h3>
+              <h3 className="text-xl font-bold mb-2 text-white">{translations.upgradeTitle}</h3>
               <p className="text-gray-300 mb-6">
-                ترق�� لباقة مدفوعة واستمتع بمميزات أكثر ورسائل وصور غير محدودة!
+                {translations.upgradeDesc}
               </p>
               <div className="flex gap-3">
                 <Button
@@ -1241,11 +1253,11 @@ export default function ChatPage() {
                   variant="outline"
                   className="flex-1 border-gray-600"
                 >
-                  إلغاء
+                  {translations.cancelBtn}
                 </Button>
                 <Link href="/pricing" className="flex-1">
                   <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
-                    شاهد الباقات
+                    {translations.upgradeBtn}
                   </Button>
                 </Link>
               </div>

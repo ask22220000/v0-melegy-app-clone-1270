@@ -70,7 +70,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/images/logo.jpg" />
         <script src="/register-sw.js" defer></script>
       </head>
-      <body className={`${cairo.className} antialiased`}>
+      <body className={`${cairo.className} antialiased`} suppressHydrationWarning>
         <AppProvider>
           <SessionTracker />
           <PWAInstallPrompt />
