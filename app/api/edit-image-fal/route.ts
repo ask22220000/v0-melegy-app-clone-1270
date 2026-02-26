@@ -48,49 +48,50 @@ export async function POST(request: NextRequest) {
     
     console.log(`[v0] Processing ${finalImageUrls.length} image(s) for editing`)
 
-    // Step 2: Translate and enhance prompt (with character and scene preservation)
+    // Step 2: Use Gemini 3 Flash as Prompt Engineer — translate + preserve subject features
     const enhancedPrompt = await processPromptForImageEditing(prompt)
 
-    // Step 3: Edit/combine images with fal-ai/flux-2/turbo/edit (fast and precise)
-    // Lower strength = more preservation of original image (0.3-0.4 preserves identity better)
-    let result
+    // Step 3: Edit image via fal-ai/flux-2/turbo/edit
+    // strength < 0.5 = more preservation of original identity/scene
+    let result: any
     try {
       result = await fal.subscribe("fal-ai/flux-2/turbo/edit", {
         input: {
           prompt: enhancedPrompt,
-          image_urls: finalImageUrls, // Pass all images for combination/editing
-          strength: 0.35, // Lower strength to preserve character features and scene (0.35 = 65% original preserved)
-          guidance_scale: 3.0, // Lower guidance for better preservation
-          num_inference_steps: 4, // Turbo model uses fewer steps
-          image_size: {
-            width: 1080,
-            height: 1350
-          }, // 4:5 portrait format (1080x1350)
+          image_url: finalImageUrls[0], // primary image (person / product)
+          // Pass additional reference images if provided
+          ...(finalImageUrls.length > 1 ? { image_urls: finalImageUrls } : {}),
+          strength: 0.35, // 65% original preserved — keeps facial/product features intact
+          guidance_scale: 3.0,
+          num_inference_steps: 4,
+          image_size: { width: 1080, height: 1350 }, // 4:5 portrait
           enable_safety_checker: false,
         },
       })
     } catch (falError: any) {
-      console.error("[v0] FAL API error:", falError)
-      
-      // Handle specific FAL errors
+      console.error("[edit] FAL API error:", falError)
+
       if (falError.status === 403 && falError.body?.detail?.includes("Exhausted balance")) {
         throw new Error("رصيد FAL انتهى. يرجى شحن الرصيد من fal.ai/dashboard/billing")
       }
-      
       if (falError.status === 413 || falError.message?.includes("payload too large")) {
         throw new Error("الصورة كبيرة جداً. يرجى استخدام صورة أصغر (أقل من 5 ميجا)")
       }
-      
       if (falError.status === 504 || falError.message?.includes("timeout")) {
         throw new Error("انتهى وقت المعالجة. حاول مرة أخرى بصورة أصغر")
       }
-      
-      const errorMsg = falError.body?.detail || falError.body?.detail?.[0]?.msg || falError.message || "خطأ في الخدمة"
+
+      const errorMsg =
+        falError.body?.detail?.[0]?.msg ||
+        falError.body?.detail ||
+        falError.message ||
+        "خطأ في الخدمة"
       throw new Error(`فشل تعديل الصورة: ${errorMsg}`)
     }
 
-    // Extract the edited image URL from response (based on docs: result.data.images[0].url)
-    const editedImageUrl = (result as any).data?.images?.[0]?.url || (result as any).images?.[0]?.url
+    // fal-ai/flux-2/turbo/edit may return images at result.images or result.data.images
+    const editedImageUrl: string | undefined =
+      result?.images?.[0]?.url ?? result?.data?.images?.[0]?.url
 
     if (!editedImageUrl) {
       throw new Error("FAL API did not return an edited image")
