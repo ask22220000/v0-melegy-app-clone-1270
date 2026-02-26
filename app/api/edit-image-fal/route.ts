@@ -41,12 +41,8 @@ export async function POST(request: NextRequest) {
         if (base64Size > 15) {
           throw new Error(`الصورة ${i + 1} كبيرة جداً (أكثر من 15 ميجا). قلل جودة الصورة أو استخدم صورة أصغر.`)
         }
-        
-        console.log(`[v0] Image ${i + 1} size: ${base64Size.toFixed(2)} MB`)
       }
     }
-    
-    console.log(`[v0] Processing ${finalImageUrls.length} image(s) for editing`)
 
     // Step 2: Use Gemini 3 Flash as Prompt Engineer — translate + preserve subject features
     const enhancedPrompt = await processPromptForImageEditing(prompt)
