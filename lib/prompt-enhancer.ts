@@ -1,33 +1,15 @@
-// Call Gemini via Vercel AI Gateway REST API directly
-// This is more reliable than using the AI SDK wrapper
+import { generateText } from "ai"
+
+// Call Gemini 3 Flash via Vercel AI Gateway using the AI SDK (same pattern as all other routes)
 async function callGemini(system: string, userMessage: string, maxTokens = 200, temperature = 0.7): Promise<string> {
-  const apiKey = process.env.AI_GATEWAY_API_KEY
-  if (!apiKey) throw new Error("AI_GATEWAY_API_KEY is not set")
-
-  const response = await fetch("https://gateway.ai.vercel.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.0-flash-001",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: userMessage },
-      ],
-      max_tokens: maxTokens,
-      temperature,
-    }),
+  const { text } = await generateText({
+    model: "google/gemini-3-flash",
+    system,
+    messages: [{ role: "user", content: userMessage }],
+    maxOutputTokens: maxTokens,
+    temperature,
   })
-
-  if (!response.ok) {
-    const err = await response.text()
-    throw new Error(`Gemini API error ${response.status}: ${err}`)
-  }
-
-  const data = await response.json()
-  return data.choices?.[0]?.message?.content?.trim() ?? ""
+  return text.trim()
 }
 
 // Full pipeline: translate Arabic + engineer a professional prompt for FAL image generation
