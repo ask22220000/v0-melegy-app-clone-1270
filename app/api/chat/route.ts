@@ -1,4 +1,4 @@
-import { generateText } from "ai"
+import { generateStreamingResponse } from "@/lib/perplexityService"
 
 export const maxDuration = 30
 
@@ -142,33 +142,20 @@ export async function POST(req: Request) {
       }
     }
 
-    // Regular chat response using Gemini from AI Gateway
-    console.log("[v0] Generating response with Gemini from AI Gateway...")
+    // Regular chat response
+    const conversationHistory = messages.slice(-1).map((m: any) => ({
+      role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+      content: m.content,
+    }))
 
-    const result = await generateText({
-      model: "google/gemini-2.0-flash-exp",
-      messages: messages.map((m: any) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      maxTokens: 500,
-      temperature: 0.7,
-    })
+    console.log("[v0] Generating response with Perplexity...")
 
-    const responseText = result.text
-      .replace(/\*\*/g, "")
-      .replace(/\*/g, "")
-      .replace(/\_\_/g, "")
-      .replace(/\_/g, "")
-      .replace(/\[\d+\]/g, "")
-      .replace(/\#\#\#?/g, "")
-      .trim()
+    const stream = await generateStreamingResponse(userMessage, conversationHistory)
 
     const responseTime = (Date.now() - startTime) / 1000
     console.log("[v0] Response generated in", responseTime, "seconds")
 
-    const encoder = new TextEncoder()
-    return new Response(encoder.encode(responseText), {
+    return new Response(stream, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "X-Content-Type-Options": "nosniff",
