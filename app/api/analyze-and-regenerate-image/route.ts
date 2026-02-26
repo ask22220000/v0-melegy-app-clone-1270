@@ -3,7 +3,7 @@ import { Buffer } from "buffer"
 
 async function analyzeImageWithPerplexity(imageBase64: string, mimeType: string, editInstructions: string) {
   try {
-    const perplexityApiKey = process.env.PERPLEXITY_API_KEY
+    const perplexityApiKey = "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"
 
     console.log("[v0] Using Perplexity to analyze image...")
 
