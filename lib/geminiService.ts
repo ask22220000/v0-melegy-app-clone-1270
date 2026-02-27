@@ -58,15 +58,10 @@ export async function generateGeminiResponse(userInput: string, conversationHist
         continue
       }
 
-      // Strip all markdown formatting from the response
+      // Clean up response
       generatedText = generatedText
-        .replace(/\*\*(.+?)\*\*/g, "$1")   // bold
-        .replace(/\*(.+?)\*/g, "$1")        // italic
-        .replace(/#{1,6}\s+/g, "")          // headings
-        .replace(/^\s*[-*+]\s+/gm, "")      // bullet points
-        .replace(/^\s*\d+\.\s+/gm, "")      // numbered lists
-        .replace(/\[\d+\]/g, "")            // citation numbers
-        .replace(/`{1,3}[^`]*`{1,3}/g, (m) => m.replace(/`/g, "")) // code blocks
+        .replace(/\*\*/g, "")
+        .replace(/\[\d+\]/g, "")
         .replace(/\s+/g, " ")
         .trim()
 

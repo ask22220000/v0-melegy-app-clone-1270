@@ -62,7 +62,7 @@ export function Footer() {
               {translations.footerPricing}
             </Link>
           </div>
-          <p className="text-slate-400 text-sm" suppressHydrationWarning>
+          <p className="text-slate-400 text-sm">
             <Link
               href="https://www.aistudio-vision.com"
               target="_blank"

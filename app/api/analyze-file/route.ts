@@ -23,10 +23,10 @@ export async function POST(request: NextRequest) {
         const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
 
         analyses.push(
-          `تحليل ملف ${file.name}\n` +
-            `عدد الأعمدة: ${(data[0] as any[])?.length || 0}\n` +
-            `عدد الصفوف: ${data.length}\n` +
-            `البيانات: ${JSON.stringify(data.slice(0, 5))}`,
+          `📊 تحليل ملف Excel: ${file.name}\n` +
+            `- عدد الأعمدة: ${(data[0] as any[])?.length || 0}\n` +
+            `- عدد الصفوف: ${data.length}\n` +
+            `- البيانات: ${JSON.stringify(data.slice(0, 5))}`,
         )
       } else if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(fileType || "")) {
         try {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
                   content: [
                     {
                       type: "text",
-                      text: "حلل الصورة دي بالتفصيل واوصفها بالعربي المصري كنص عادي متصل بدون نجوم أو عناوين أو رموز أو تنسيق. قول إيه اللي في الصورة، الألوان، الأشخاص لو موجودين، الأماكن، وأي تفاصيل مهمة.",
+                      text: "حلل الصورة دي بالتفصيل واوصفها بالعربي المصري. قول إيه اللي في الصورة، الألوان، الأشخاص لو موجودين، الأماكن، وأي تفاصيل مهمة.",
                     },
                     {
                       type: "image_url",
@@ -69,15 +69,18 @@ export async function POST(request: NextRequest) {
           const visionResult = await visionResponse.text()
 
           analyses.push(
-            `تحليل الصورة: ${file.name}\n` +
-              `الحجم: ${(file.size / 1024).toFixed(2)} KB\n\n` +
-              `${visionResult}`,
+            `🖼️ تحليل الصورة: ${file.name}\n` +
+              `- الحجم: ${(file.size / 1024).toFixed(2)} KB\n` +
+              `- النوع: ${file.type}\n\n` +
+              `📝 الوصف:\n${visionResult}`,
           )
         } catch (visionError) {
+          console.error("[v0] Vision analysis error:", visionError)
           analyses.push(
-            `صورة: ${file.name}\n` +
-              `الحجم: ${(file.size / 1024).toFixed(2)} KB\n` +
-              `تم استلام الصورة بنجاح. لو عايز تحليل مفصل اسألني عنها.`,
+            `🖼️ صورة: ${file.name}\n` +
+              `- الحجم: ${(file.size / 1024).toFixed(2)} KB\n` +
+              `- النوع: ${file.type}\n` +
+              `- تم استلام الصورة بنجاح! لو عايز تحليل مفصل، اسألني عنها.`,
           )
         }
       }
