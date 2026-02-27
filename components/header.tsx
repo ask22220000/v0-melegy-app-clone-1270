@@ -13,7 +13,8 @@ type HeaderProps = {
 }
 
 export function Header({ showChatHistory = false, onChatHistoryClick, showHomeButton = false }: HeaderProps) {
-  const { translations, language, setLanguage, mounted } = useApp()
+  const { translations, language, setLanguage } = useApp()
+  // Default to "dark" — synced from localStorage after mount so no flash
   const [theme, setTheme] = useState<"light" | "dark">("dark")
 
   useEffect(() => {
@@ -35,36 +36,33 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
 
   return (
     <>
-      {/* Language toggle — physically pinned to top-LEFT via inline style, immune to dir="rtl" */}
-      <div className="fixed z-50" style={{ top: "12px", left: "12px" }} suppressHydrationWarning>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleLanguage}
-          className="bg-card backdrop-blur-md border-2 border-cyan-500/70 text-cyan-400 hover:text-cyan-300 hover:border-cyan-400 flex items-center gap-1 font-bold px-2 h-8"
-          suppressHydrationWarning
-        >
-          <Languages className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-xs leading-none" suppressHydrationWarning>
-            {mounted ? translations.languageToggle : "EN"}
-          </span>
-        </Button>
-      </div>
-
-      {/* Theme + nav buttons — physically pinned to top-RIGHT via inline style */}
+      {/* Fixed button row — uses inline style for physical left so RTL cannot flip it */}
       <div
         dir="ltr"
         className="fixed z-50 flex items-center gap-2"
-        style={{ top: "12px", right: "12px" }}
+        style={{ top: "16px", left: "16px" }}
       >
+        {/* Theme toggle */}
         <Button
           variant="outline"
           size="sm"
           onClick={toggleTheme}
-          className="bg-card backdrop-blur-md border-border/50 flex items-center gap-2 text-foreground hover:text-foreground h-8 px-2"
-          suppressHydrationWarning
+          className="bg-card backdrop-blur-md border-border/50 flex items-center gap-2 text-foreground hover:text-foreground"
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         >
-          <Sun className="h-3.5 w-3.5" suppressHydrationWarning />
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+
+        {/* Language toggle */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleLanguage}
+          className="bg-card backdrop-blur-md border-2 border-cyan-500/70 text-cyan-400 hover:text-cyan-300 hover:border-cyan-400 flex items-center gap-1.5 font-bold min-w-[52px]"
+          aria-label={language === "ar" ? "Switch to English" : "Switch to Arabic"}
+        >
+          <Languages className="h-4 w-4 shrink-0" />
+          <span className="text-xs">{translations.languageToggle}</span>
         </Button>
 
         {showHomeButton && (
@@ -72,12 +70,10 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
             <Button
               variant="outline"
               size="sm"
-              className="bg-background/20 backdrop-blur-md border-border/50 flex items-center gap-2 text-white hover:text-white h-8 px-2"
+              className="bg-background/20 backdrop-blur-md border-border/50 flex items-center gap-2 text-white hover:text-white"
             >
-              <Home className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline text-xs" suppressHydrationWarning>
-                {mounted ? translations.home : ""}
-              </span>
+              <Home className="h-4 w-4" />
+              <span className="hidden sm:inline">{translations.home}</span>
             </Button>
           </Link>
         )}
@@ -87,12 +83,10 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
             variant="outline"
             size="sm"
             onClick={onChatHistoryClick}
-            className="bg-background/20 backdrop-blur-md border-border/50 flex items-center gap-2 text-white hover:text-white h-8 px-2"
+            className="bg-background/20 backdrop-blur-md border-border/50 flex items-center gap-2 text-white hover:text-white"
           >
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline text-xs" suppressHydrationWarning>
-              {mounted ? translations.history : ""}
-            </span>
+            <MessageSquare className="h-4 w-4" />
+            <span className="hidden sm:inline">{translations.history}</span>
           </Button>
         )}
       </div>
