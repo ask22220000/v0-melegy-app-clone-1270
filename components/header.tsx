@@ -33,37 +33,25 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
     setLanguage(language === "ar" ? "en" : "ar")
   }
 
-  // Render a stable skeleton on server / before hydration to avoid mismatch
-  if (!mounted) {
-    return (
-      <>
-        <div className="fixed z-50" style={{ top: "12px", left: "12px" }}>
-          <div className="h-8 w-[52px] rounded-md bg-card border border-border/50" />
-        </div>
-        <div className="fixed z-50" style={{ top: "12px", right: "12px" }}>
-          <div className="h-8 w-8 rounded-md bg-card border border-border/50" />
-        </div>
-      </>
-    )
-  }
-
   return (
     <>
-      {/* Language toggle — physically pinned to top-LEFT, immune to dir="rtl" */}
-      <div className="fixed z-50" style={{ top: "12px", left: "12px" }}>
+      {/* Language toggle — physically pinned to top-LEFT via inline style, immune to dir="rtl" */}
+      <div className="fixed z-50" style={{ top: "12px", left: "12px" }} suppressHydrationWarning>
         <Button
           variant="outline"
           size="sm"
           onClick={toggleLanguage}
           className="bg-card backdrop-blur-md border-2 border-cyan-500/70 text-cyan-400 hover:text-cyan-300 hover:border-cyan-400 flex items-center gap-1 font-bold px-2 h-8"
-          aria-label={language === "ar" ? "Switch to English" : "Switch to Arabic"}
+          suppressHydrationWarning
         >
           <Languages className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-xs leading-none">{translations.languageToggle}</span>
+          <span className="text-xs leading-none" suppressHydrationWarning>
+            {mounted ? translations.languageToggle : "EN"}
+          </span>
         </Button>
       </div>
 
-      {/* Theme + nav buttons — physically pinned to top-RIGHT */}
+      {/* Theme + nav buttons — physically pinned to top-RIGHT via inline style */}
       <div
         dir="ltr"
         className="fixed z-50 flex items-center gap-2"
@@ -74,9 +62,9 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
           size="sm"
           onClick={toggleTheme}
           className="bg-card backdrop-blur-md border-border/50 flex items-center gap-2 text-foreground hover:text-foreground h-8 px-2"
-          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          suppressHydrationWarning
         >
-          {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+          <Sun className="h-3.5 w-3.5" suppressHydrationWarning />
         </Button>
 
         {showHomeButton && (
@@ -87,7 +75,9 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
               className="bg-background/20 backdrop-blur-md border-border/50 flex items-center gap-2 text-white hover:text-white h-8 px-2"
             >
               <Home className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline text-xs">{translations.home}</span>
+              <span className="hidden sm:inline text-xs" suppressHydrationWarning>
+                {mounted ? translations.home : ""}
+              </span>
             </Button>
           </Link>
         )}
@@ -100,7 +90,9 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
             className="bg-background/20 backdrop-blur-md border-border/50 flex items-center gap-2 text-white hover:text-white h-8 px-2"
           >
             <MessageSquare className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline text-xs">{translations.history}</span>
+            <span className="hidden sm:inline text-xs" suppressHydrationWarning>
+              {mounted ? translations.history : ""}
+            </span>
           </Button>
         )}
       </div>
