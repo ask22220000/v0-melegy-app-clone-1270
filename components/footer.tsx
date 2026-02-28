@@ -62,7 +62,7 @@ export function Footer() {
               {translations.footerPricing}
             </Link>
           </div>
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 text-sm" suppressHydrationWarning>
             <Link
               href="https://www.aistudio-vision.com"
               target="_blank"
@@ -70,9 +70,10 @@ export function Footer() {
               className="hover:text-blue-400 transition-colors"
             >
               VISION AI STUDIO
-            </Link>{" "}
-            | {translations.madeInEgypt}{" "}
-            <span suppressHydrationWarning aria-hidden="true">🇪🇬</span>
+            </Link>
+            {" | "}
+            <span suppressHydrationWarning>{translations.madeInEgypt}</span>
+            {" \uD83C\uDDEA\uD83C\uDDEC"}
           </p>
           <p className="text-slate-500 text-xs mt-1">By Joseph Ibrahim</p>
         </div>
