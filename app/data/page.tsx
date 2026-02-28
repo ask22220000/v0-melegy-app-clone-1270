@@ -194,7 +194,7 @@ export default function DataPage() {
           </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {(() => {
-              const allFeatures = Object.values(analytics.featureUsage)
+              const allFeatures = Object.values(analytics.featureUsage ?? {})
               const maxFeature = Math.max(...allFeatures, 1)
               return (
                 <>
@@ -216,7 +216,7 @@ export default function DataPage() {
             <h2 className="mb-6 text-2xl font-bold text-white">أنواع الردود</h2>
             <div className="space-y-4">
               {(() => {
-                const allTypes = Object.values(analytics.responseTypes)
+                const allTypes = Object.values(analytics.responseTypes ?? {})
                 const maxType = Math.max(...allTypes, 1)
                 return (
                   <>
@@ -329,20 +329,24 @@ export default function DataPage() {
         <Card className="mb-8 p-6 bg-[#0f2744] border-[#1e3a5f]">
           <h2 className="mb-6 text-2xl font-bold text-white">النشاط بالساعة (آخر 24 ساعة)</h2>
           <div className="flex h-48 items-end justify-between gap-1">
-            {analytics.hourlyActivity.map((hour) => {
-              const maxMessages = Math.max(...analytics.hourlyActivity.map((h) => h.messages))
-              const height = maxMessages > 0 ? (hour.messages / maxMessages) * 100 : 0
-              return (
-                <div key={hour.hour} className="flex flex-1 flex-col items-center gap-2">
-                  <div
-                    className="w-full rounded-t bg-blue-500 transition-all hover:bg-blue-400"
-                    style={{ height: `${height}%`, minHeight: height > 0 ? "4px" : "0" }}
-                    title={`${hour.hour}:00 - ${hour.messages} رسالة`}
-                  />
-                  <div className="text-xs text-gray-500">{hour.hour}</div>
-                </div>
-              )
-            })}
+            {(analytics.hourlyActivity ?? []).length > 0 ? (() => {
+              const maxMessages = Math.max(...(analytics.hourlyActivity ?? []).map((h) => h.messages), 1)
+              return (analytics.hourlyActivity ?? []).map((hour) => {
+                const height = (hour.messages / maxMessages) * 100
+                return (
+                  <div key={hour.hour} className="flex flex-1 flex-col items-center gap-2">
+                    <div
+                      className="w-full rounded-t bg-blue-500 transition-all hover:bg-blue-400"
+                      style={{ height: `${height}%`, minHeight: height > 0 ? "4px" : "0" }}
+                      title={`${hour.hour}:00 - ${hour.messages} رسالة`}
+                    />
+                    <div className="text-xs text-gray-500">{hour.hour}</div>
+                  </div>
+                )
+              })
+            })() : (
+              <div className="w-full text-center text-gray-500 self-center">لا توجد بيانات</div>
+            )}
           </div>
         </Card>
 
