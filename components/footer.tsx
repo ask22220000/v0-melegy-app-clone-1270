@@ -4,6 +4,9 @@ import { Linkedin, Instagram, Facebook, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { useApp } from "@/lib/contexts/AppContext"
 
+// Static footer text — never from translations to avoid hydration mismatch
+const MADE_IN_EGYPT = "\u0635\u0646\u0639 \u0641\u064A \u0645\u0635\u0631 \uD83C\uDDEA\uD83C\uDDEC"
+
 export function Footer() {
   const { translations } = useApp()
 
@@ -71,7 +74,7 @@ export function Footer() {
             >
               VISION AI STUDIO
             </Link>
-            {" | \u0635\u0646\u0639 \u0641\u064A \u0645\u0635\u0631 \uD83C\uDDEA\uD83C\uDDEC"}
+            {" | "}{MADE_IN_EGYPT}
           </p>
           <p className="text-slate-500 text-xs mt-1">By Joseph Ibrahim</p>
         </div>
