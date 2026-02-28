@@ -1,7 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Cairo, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
+// Analytics removed — @vercel/analytics crashes in this environment
 import { AppProvider } from "@/lib/contexts/AppContext"
 import { SessionTracker } from "@/components/session-tracker"
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
@@ -76,7 +76,6 @@ export default function RootLayout({
           <PWAInstallPrompt />
           {children}
         </AppProvider>
-        <Analytics />
       </body>
     </html>
   )

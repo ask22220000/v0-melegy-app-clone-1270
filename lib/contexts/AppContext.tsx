@@ -42,7 +42,7 @@ const translations = {
       deepThinking: { title: "تفكير عميق", description: "تحليل شامل ومنطقي متقدم" },
     },
     // Footer
-    madeInEgypt: "صنع في مصر 🇪🇬",
+    madeInEgypt: "صنع في مصر",
     whatsappSupport: "للدعم على WhatsApp",
     whatsappMessage: "مرحباً! كيف يمكننا مساعدتك؟",
     footerPricing: "الأسعار والباقات",
@@ -118,7 +118,7 @@ const translations = {
       deepThinking: { title: "Deep Thinking", description: "Comprehensive and advanced logical analysis" },
     },
     // Footer
-    madeInEgypt: "Made in Egypt 🇪🇬",
+    madeInEgypt: "Made in Egypt",
     whatsappSupport: "WhatsApp Support",
     whatsappMessage: "Hello! How can we help you?",
     footerPricing: "Plans & Pricing",
