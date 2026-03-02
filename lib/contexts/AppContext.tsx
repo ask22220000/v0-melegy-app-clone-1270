@@ -166,34 +166,22 @@ const translations = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
-function getInitialLanguage(): Language {
-  if (typeof window === "undefined") return "ar"
-  try {
-    const saved = localStorage.getItem("language") as Language
-    if (saved === "ar" || saved === "en") return saved
-  } catch { /* ignore */ }
-  return "ar"
-}
-
-function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "dark"
-  try {
-    const saved = localStorage.getItem("theme") as Theme
-    if (saved === "dark" || saved === "light") return saved
-  } catch { /* ignore */ }
-  return "dark"
-}
-
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(getInitialLanguage)
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
+  const [language, setLanguageState] = useState<Language>("ar")
+  const [theme, setThemeState] = useState<Theme>("dark")
+
+  // Load persisted values after mount — runs only on client, avoids hydration mismatch
+  useEffect(() => {
+    try {
+      const savedLang = localStorage.getItem("language") as Language
+      const savedTheme = localStorage.getItem("theme") as Theme
+      if (savedLang === "ar" || savedLang === "en") setLanguageState(savedLang)
+      if (savedTheme === "dark" || savedTheme === "light") setThemeState(savedTheme)
+    } catch { /* ignore */ }
+  }, [])
 
   useEffect(() => {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
+    document.documentElement.classList.toggle("dark", theme === "dark")
   }, [theme])
 
   useEffect(() => {

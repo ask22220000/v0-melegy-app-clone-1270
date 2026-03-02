@@ -11,7 +11,7 @@ export default function HomePage() {
   const { translations, language } = useApp()
 
   return (
-    <div className="min-h-screen bg-background homepage-dark-bg" dir={language === "ar" ? "rtl" : "ltr"}>
+    <div className="min-h-screen bg-background homepage-dark-bg" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
       <Header />
       <Hero />
       <Features />
