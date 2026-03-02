@@ -166,23 +166,27 @@ const translations = {
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
+function getInitialLanguage(): Language {
+  if (typeof window === "undefined") return "ar"
+  try {
+    const saved = localStorage.getItem("language") as Language
+    if (saved === "ar" || saved === "en") return saved
+  } catch { /* ignore */ }
+  return "ar"
+}
+
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "dark"
+  try {
+    const saved = localStorage.getItem("theme") as Theme
+    if (saved === "dark" || saved === "light") return saved
+  } catch { /* ignore */ }
+  return "dark"
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("ar")
-  const [theme, setThemeState] = useState<Theme>("dark")
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-
-    try {
-      const savedLang = localStorage.getItem("language") as Language
-      const savedTheme = localStorage.getItem("theme") as Theme
-
-      if (savedLang) setLanguageState(savedLang)
-      if (savedTheme) setThemeState(savedTheme)
-    } catch {
-      // silently ignore localStorage errors
-    }
-  }, [])
+  const [language, setLanguageState] = useState<Language>(getInitialLanguage)
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
 
   useEffect(() => {
     if (theme === "dark") {
