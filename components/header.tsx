@@ -43,15 +43,18 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
         className="fixed z-50 flex items-center gap-2"
         style={{ top: "16px", left: "16px" }}
       >
-        {/* Theme toggle — static classes before mount to avoid hydration mismatch */}
+        {/* Theme toggle — identical render on server and client until mounted */}
         <Button
           variant="outline"
           size="sm"
           onClick={toggleTheme}
           className="bg-card backdrop-blur-md border-border/50 flex items-center gap-2 text-foreground hover:text-foreground"
         >
-          <Sun className={`h-4 w-4 ${!mounted ? "block" : theme === "dark" ? "block" : "hidden"}`} />
-          <Moon className={`h-4 w-4 ${!mounted ? "hidden" : theme === "dark" ? "hidden" : "block"}`} />
+          {mounted ? (
+            theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
+          ) : (
+            <Sun className="h-4 w-4" />
+          )}
         </Button>
 
         {/* Language toggle */}
@@ -62,7 +65,11 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
           className="bg-card backdrop-blur-md border-2 border-cyan-500/70 text-cyan-400 hover:text-cyan-300 hover:border-cyan-400 flex items-center gap-1.5 font-bold min-w-[52px]"
         >
           <Languages className="h-4 w-4 shrink-0" />
-          <span className="text-xs" suppressHydrationWarning>{mounted ? translations.languageToggle : "EN"}</span>
+          {mounted ? (
+            <span className="text-xs">{translations.languageToggle}</span>
+          ) : (
+            <span className="text-xs">EN</span>
+          )}
         </Button>
 
         {showHomeButton && (
