@@ -1,23 +1,10 @@
 import { NextResponse } from "next/server"
-import { experimental_generateVideo as generateVideo, createGateway } from "ai"
+import { experimental_generateVideo as generateVideo } from "ai"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
-import { Agent } from "undici"
 
 // Allow up to 5 minutes for video generation
 export const maxDuration = 300
-
-// Custom gateway with extended timeouts — Wan i2v/r2v can take several minutes
-const gateway = createGateway({
-  fetch: (url, init) =>
-    fetch(url, {
-      ...init,
-      dispatcher: new Agent({
-        headersTimeout: 12 * 60 * 1000, // 12 min
-        bodyTimeout: 12 * 60 * 1000,
-      }),
-    } as RequestInit),
-})
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -44,10 +31,25 @@ async function translateToEnglish(prompt: string): Promise<string> {
 }
 
 async function ensurePublicBlobUrl(imageUrl: string): Promise<string> {
-  // Already a Vercel Blob URL — reuse it
+  // Already a Vercel Blob URL — reuse it directly
   if (imageUrl.includes("public.blob.vercel-storage.com")) return imageUrl
 
-  // Fetch and re-host on Vercel Blob so Wan can access it
+  // Data URL (base64 image from file upload) — upload to Blob
+  if (imageUrl.startsWith("data:")) {
+    const matches = imageUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/)
+    if (!matches) throw new Error("Invalid data URL format")
+    const contentType = matches[1]
+    const base64Data = matches[2]
+    const buffer = Buffer.from(base64Data, "base64")
+    const ext = contentType.includes("png") ? "png" : "jpg"
+    const { url } = await put(`animate-src-${Date.now()}.${ext}`, buffer, {
+      access: "public",
+      contentType,
+    })
+    return url
+  }
+
+  // External URL — fetch and re-host on Vercel Blob
   const imgRes = await fetch(imageUrl)
   if (!imgRes.ok) throw new Error(`Cannot fetch image: ${imgRes.status}`)
   const imgBuffer = await imgRes.arrayBuffer()
@@ -74,23 +76,22 @@ export async function POST(req: Request) {
     // 1. Translate Arabic prompt to English
     const englishPrompt = await translateToEnglish(prompt)
 
-    // 2. Ensure the image is on Vercel Blob (Wan requires public URLs)
+    // 2. Ensure the image is on Vercel Blob (Wan requires a public URL)
     const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
 
     // 3. Generate video via Vercel AI Gateway + Wan
     let result: Awaited<ReturnType<typeof generateVideo>>
 
     if (mode === "r2v") {
-      // Reference-to-video: character1 refers to the uploaded image
+      // Reference-to-video: the uploaded image is the character reference
       const finalPrompt = englishPrompt.toLowerCase().includes("character1")
         ? englishPrompt
         : `character1 ${englishPrompt}`
 
       result = await generateVideo({
-        model: gateway.video("alibaba/wan-v2.6-r2v"),
+        model: "alibaba/wan-v2.6-r2v",
         prompt: finalPrompt,
         duration: 10,
-        resolution: "1280x720",
         providerOptions: {
           alibaba: {
             referenceUrls: [publicImageUrl],
@@ -102,13 +103,12 @@ export async function POST(req: Request) {
     } else {
       // Image-to-video (default): animate the image directly
       result = await generateVideo({
-        model: gateway.video("alibaba/wan-v2.6-i2v"),
+        model: "alibaba/wan-v2.6-i2v",
         prompt: {
           image: publicImageUrl,
           text: englishPrompt,
         },
         duration: 10,
-        resolution: "1280x720",
         providerOptions: {
           alibaba: {
             audio: false,
@@ -118,8 +118,8 @@ export async function POST(req: Request) {
       })
     }
 
-    // 4. Upload generated video to Vercel Blob for permanent storage
-    const videoData = result.videos[0]?.uint8Array
+    // 4. Save generated video to Vercel Blob for permanent hosting
+    const videoData = result.videos?.[0]?.uint8Array
     if (!videoData) throw new Error("No video data returned from model")
 
     const { url: videoUrl } = await put(`melegy-video-${Date.now()}.mp4`, videoData, {
