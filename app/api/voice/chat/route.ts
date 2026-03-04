@@ -54,22 +54,9 @@ export async function POST(request: Request) {
       { role: "user", content: text },
     ]
 
-    // Smart routing — same pattern as perplexity-chat/route.ts:
-    // date/time questions → answered from injected datetime, no search needed
-    // news/prices/current events → perplexity/sonar (real-time web search)
-    // everything else → gemini-2.0-flash (fast, Egyptian dialect)
-    const lowerText = text.toLowerCase()
-
-    const isDateTimeQuestion = /النهاردة|اليوم|الوقت|الساعة|كام في الشهر|السنة دي|احنا في سنة|today|what time|what date|كم الساعة/.test(lowerText)
-
-    const needsWebSearch = !isDateTimeQuestion && (
-      /متى|إمتى|when|حدث|أخبار|news|الآن|now|حالياً|currently|recent|سعر|price|بورصة|دولار|جنيه|معلومات عن|information about|مباراة|نتيجة|ترتيب|طقس|weather/.test(lowerText)
-    )
-
-    const modelToUse = needsWebSearch ? "perplexity/sonar" : "google/gemini-2.0-flash-001"
-
+    // Always use perplexity/sonar via Vercel AI Gateway — has live web search built-in
     const { text: rawReply } = await generateText({
-      model: modelToUse,
+      model: "perplexity/sonar",
       system: systemWithDate,
       messages,
       maxOutputTokens: 200,
