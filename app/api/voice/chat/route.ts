@@ -1,52 +1,46 @@
+import { generateText } from "ai"
+
 export const runtime = "nodejs"
+export const maxDuration = 30
 
 export async function POST(request: Request) {
   try {
     const { text, history } = await request.json()
 
-    if (!text) {
+    if (!text?.trim()) {
       return Response.json({ error: "No text provided" }, { status: 400 })
     }
 
-    const GROQ_API_KEY = process.env.GROQ_API_KEY
-    if (!GROQ_API_KEY) {
-      return Response.json({ error: "Groq API key not configured" }, { status: 500 })
-    }
-
-    const messages = [
-      {
-        role: "system",
-        content:
-          "أنت ميليجي، مساعد ذكاء اصطناعي مصري ذكي وودود. الرسائل اللي بتوصلك جاية من تحويل صوت لنص، فممكن يكون فيها أخطاء إملائية أو كلمات مش واضحة — افهم المقصود من السياق ورد بشكل صح. تكلم دايمًا باللهجة المصرية العامية الطبيعية. ردودك لازم تكون قصيرة ومباشرة لأنها هتتقرأ بصوت عالي — جملة أو جملتين بالكتير. متستخدمش markdown أو نجوم أو تنسيق خاص. كلم المستخدم بأسلوب عفوي ومريح.",
-      },
+    // Build ModelMessage array — history already in { role, content } format
+    const messages: { role: "user" | "assistant"; content: string }[] = [
       ...(history || []),
       { role: "user", content: text },
     ]
 
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json",
+    const { text: reply } = await generateText({
+      // Gemini 2.0 Flash via Vercel AI Gateway — supports grounding with Google Search
+      model: "google/gemini-2.0-flash-001",
+      system:
+        "أنت ميليجي، مساعد ذكاء اصطناعي مصري ذكي وودود. " +
+        "الرسائل اللي بتوصلك جاية من تحويل صوت لنص، فممكن يكون فيها أخطاء إملائية أو كلمات مش واضحة — افهم المقصود من السياق ورد بشكل صح. " +
+        "تكلم دايمًا باللهجة المصرية العامية الطبيعية زي ما المصريين بيتكلموا. " +
+        "ردودك لازم تكون قصيرة ومباشرة لأنها هتتقرأ بصوت عالي — جملة أو جملتين بالكتير. " +
+        "لو السؤال عن معلومات حديثة أو أخبار أو أسعار أو أي حاجة محتاج تبحث عنها، ابحث وجيب المعلومة الصح. " +
+        "متستخدمش markdown أو نجوم أو تنسيق خاص. كلم المستخدم بأسلوب عفوي ومريح.",
+      messages,
+      maxOutputTokens: 200,
+      temperature: 0.7,
+      providerOptions: {
+        // Enable Google Search grounding for real-time info
+        google: {
+          useSearchGrounding: true,
+        },
       },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages,
-        max_tokens: 120,
-        temperature: 0.7,
-        stream: false,
-      }),
     })
 
-    if (!res.ok) {
-      const err = await res.text()
-      return Response.json({ error: `Groq chat error: ${err}` }, { status: 502 })
-    }
-
-    const data = await res.json()
-    const reply = data.choices?.[0]?.message?.content || ""
-    return Response.json({ reply })
+    return Response.json({ reply: reply.trim() })
   } catch (err: any) {
+    console.error("[voice/chat] Error:", err?.message)
     return Response.json({ error: err.message }, { status: 500 })
   }
 }
