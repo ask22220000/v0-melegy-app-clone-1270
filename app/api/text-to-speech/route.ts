@@ -2,7 +2,7 @@ export const runtime = "nodejs"
 
 export async function POST(request: Request) {
   try {
-    const { text } = await request.json()
+    const { text, speed } = await request.json()
 
     if (!text || typeof text !== "string") {
       return new Response(JSON.stringify({ error: "Text is required" }), {
@@ -41,6 +41,7 @@ export async function POST(request: Request) {
             similarity_boost: 0.80,
             style: 0.10,
             use_speaker_boost: true,
+            speed: typeof speed === "number" ? speed : 1.2,
           },
         }),
       }
