@@ -125,67 +125,105 @@ function OrbCanvas({
         }
       }
 
-      // 3d – bright pill glow (the "IK area" in the GIF)
+      // 3d – two eye capsules (like the image: two rounded rectangles side by side)
       const cAnim =
-        state === "speaking"  ? 1 + amp * 0.50 + Math.sin(t * 0.09) * 0.07
-        : state === "listening" ? 1 + Math.sin(t * 0.07) * 0.16
+        state === "speaking"  ? 1 + amp * 0.45 + Math.sin(t * 0.09) * 0.06
+        : state === "listening" ? 1 + Math.sin(t * 0.07) * 0.14
         : state === "thinking"  ? 0.88 + Math.sin(t * 0.04) * 0.10
-        :                          0.74 + Math.sin(t * 0.022) * 0.07
+        :                          0.74 + Math.sin(t * 0.022) * 0.06
 
-      const pW = R * 0.50 * cAnim   // pill width
-      const pH = R * 0.23 * cAnim   // pill height
-      ctx.save()
-      ctx.translate(cx, cy)
-      ctx.scale(1, pH / pW)          // squash to pill shape
-      const pillG = ctx.createRadialGradient(0, 0, 0, 0, 0, pW)
-      if (state === "speaking") {
-        const b3 = 0.86 + amp * 0.14
-        pillG.addColorStop(0,    `rgba(${Math.round(215*b3)},${Math.round(248*b3)},255,1)`)
-        pillG.addColorStop(0.18, `rgba(75,215,255,${(0.92*b3).toFixed(2)})`)
-        pillG.addColorStop(0.46, `rgba(0,175,235,${(0.56*b3).toFixed(2)})`)
-        pillG.addColorStop(0.76, `rgba(35,25,205,${(0.16*b3).toFixed(2)})`)
-        pillG.addColorStop(1,    "rgba(0,0,0,0)")
-      } else if (state === "listening") {
-        pillG.addColorStop(0,    "rgba(205,250,255,0.99)")
-        pillG.addColorStop(0.26, "rgba(0,215,245,0.80)")
-        pillG.addColorStop(0.55, "rgba(0,135,215,0.44)")
-        pillG.addColorStop(1,    "rgba(0,0,0,0)")
-      } else if (state === "thinking") {
-        pillG.addColorStop(0,    "rgba(215,175,255,0.94)")
-        pillG.addColorStop(0.34, "rgba(155,55,255,0.58)")
-        pillG.addColorStop(0.68, "rgba(75,15,185,0.22)")
-        pillG.addColorStop(1,    "rgba(0,0,0,0)")
-      } else {
-        // idle – matches GIF exactly: bright cyan-white core
-        pillG.addColorStop(0,    "rgba(200,245,255,0.82)")
-        pillG.addColorStop(0.30, "rgba(60,195,255,0.52)")
-        pillG.addColorStop(0.58, "rgba(20,100,230,0.22)")
-        pillG.addColorStop(1,    "rgba(0,0,0,0)")
+      // Eye capsule dimensions
+      const eW  = R * 0.175 * cAnim   // capsule half-width
+      const eH  = R * 0.090 * cAnim   // capsule half-height
+      const eSep = R * 0.26           // separation between eye centers
+      const eBR = eH * 0.55           // border-radius approx
+
+      // Glow colour per state
+      let glowR = 0, glowG = 200, glowB = 230, glowA = 0.95
+      if (state === "speaking") { glowR = 100; glowG = 220; glowB = 255; glowA = 0.98 }
+      else if (state === "listening") { glowR = 0; glowG = 235; glowB = 215; glowA = 0.95 }
+      else if (state === "thinking")  { glowR = 190; glowG = 130; glowB = 255; glowA = 0.92 }
+
+      // Speaking blink: rapid scale on y
+      const blinkY = state === "speaking" ? Math.abs(Math.sin(t * 0.18)) * 0.45 + 0.55 : 1.0
+
+      const drawEye = (ex: number, ey: number) => {
+        ctx.save()
+        ctx.translate(ex, ey)
+        ctx.scale(1, blinkY)
+
+        // Capsule glow background
+        const eyeGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, eW * 1.3)
+        eyeGrad.addColorStop(0,    `rgba(${glowR},${glowG},${glowB},0.45)`)
+        eyeGrad.addColorStop(0.55, `rgba(${glowR},${glowG},${glowB},0.18)`)
+        eyeGrad.addColorStop(1,    "rgba(0,0,0,0)")
+        ctx.beginPath()
+        ctx.ellipse(0, 0, eW * 1.3, eH * 1.6, 0, 0, Math.PI * 2)
+        ctx.fillStyle = eyeGrad
+        ctx.fill()
+
+        // Capsule body (rounded rect path)
+        ctx.beginPath()
+        ctx.moveTo(-eW + eBR, -eH)
+        ctx.lineTo(eW - eBR, -eH)
+        ctx.quadraticCurveTo(eW, -eH, eW, -eH + eBR)
+        ctx.lineTo(eW, eH - eBR)
+        ctx.quadraticCurveTo(eW, eH, eW - eBR, eH)
+        ctx.lineTo(-eW + eBR, eH)
+        ctx.quadraticCurveTo(-eW, eH, -eW, eH - eBR)
+        ctx.lineTo(-eW, -eH + eBR)
+        ctx.quadraticCurveTo(-eW, -eH, -eW + eBR, -eH)
+        ctx.closePath()
+        const capsuleG = ctx.createLinearGradient(-eW, -eH, eW, eH)
+        capsuleG.addColorStop(0,   `rgba(${glowR + 20},${glowG},${glowB},0.85)`)
+        capsuleG.addColorStop(0.5, `rgba(${glowR},${Math.round(glowG * 0.75)},${glowB},0.70)`)
+        capsuleG.addColorStop(1,   `rgba(${Math.round(glowR * 0.6)},${Math.round(glowG * 0.5)},${Math.min(glowB + 20, 255)},0.55)`)
+        ctx.fillStyle = capsuleG
+        ctx.fill()
+
+        // Inner highlight line
+        ctx.strokeStyle = `rgba(${glowR + 40},${Math.min(glowG + 20, 255)},255,0.30)`
+        ctx.lineWidth = 0.8
+        ctx.stroke()
+
+        // Symbol inside eye: "|" left eye, "<" right eye  OR  "|<" both
+        ctx.shadowColor = `rgba(${glowR},${glowG},${glowB},1)`
+        ctx.shadowBlur  = eH * 2.8
+        ctx.fillStyle   = `rgba(255,255,255,${state === "thinking" ? 0.65 : 0.96})`
+        const fontSize  = Math.round(eH * 1.55)
+        ctx.font        = `bold ${fontSize}px monospace`
+        ctx.textAlign   = "center"
+        ctx.textBaseline = "middle"
+        ctx.restore()  // restore scale before drawing text so it's not squished
+        // Re-translate for text (no blink scale on text)
+        ctx.save()
+        ctx.translate(ex, ey)
+        ctx.shadowColor = `rgba(${glowR},${glowG},${glowB},1)`
+        ctx.shadowBlur  = eH * 2.8
+        ctx.fillStyle   = `rgba(255,255,255,${state === "thinking" ? 0.65 : 0.96})`
+        ctx.font        = `bold ${Math.round(eH * 1.55)}px monospace`
+        ctx.textAlign   = "center"
+        ctx.textBaseline = "middle"
+        ctx.restore()
       }
-      ctx.beginPath(); ctx.arc(0, 0, pW, 0, Math.PI * 2)
-      ctx.fillStyle = pillG; ctx.fill()
-      ctx.restore()
 
-      // 3e – "| <" symbol inside pill (the exact GIF icons)
+      // Draw left eye ("|" symbol) and right eye ("<" symbol)
+      const leftEyeX  = cx - eSep
+      const rightEyeX = cx + eSep
+      drawEye(leftEyeX, cy)
+      drawEye(rightEyeX, cy)
+
+      // Draw text symbols separately (no scale distortion)
+      const symFontSize = Math.round(eH * 1.65)
       ctx.save()
-      ctx.translate(cx, cy)
-      const symAlpha = state === "thinking" ? 0.55 : 0.92
-      const symScale = cAnim * (state === "speaking" ? 0.92 + amp * 0.12 : 1)
-      const symSize  = R * 0.115 * symScale   // font size reference
-
-      // Shadow / bloom behind symbols
-      ctx.shadowColor  = "rgba(180,240,255,0.95)"
-      ctx.shadowBlur   = symSize * 1.6
-      ctx.fillStyle    = `rgba(255,255,255,${symAlpha})`
-      ctx.font         = `bold ${Math.round(symSize * 1.7)}px monospace`
-      ctx.textAlign    = "center"
+      ctx.font = `bold ${symFontSize}px monospace`
+      ctx.textAlign = "center"
       ctx.textBaseline = "middle"
-
-      // Bar "|"  (left symbol)
-      const sep = symSize * 1.15
-      ctx.fillText("|", -sep, 0)
-      // Chevron "<" (right symbol)
-      ctx.fillText("<", sep * 0.55, 0)
+      ctx.shadowColor = `rgba(${glowR},${glowG},${glowB},1)`
+      ctx.shadowBlur  = eH * 3.0
+      ctx.fillStyle   = `rgba(255,255,255,${state === "thinking" ? 0.65 : 0.96})`
+      ctx.fillText("|", leftEyeX, cy)   // left eye: bar
+      ctx.fillText("<", rightEyeX, cy)  // right eye: chevron
       ctx.restore()
 
       // 3f – freq bars (speaking)
@@ -254,12 +292,17 @@ function OrbCanvas({
     }
   }, [orbStateRef, analyserRef])
 
+  // Responsive: use 80vmin capped at 420px
+  const SIZE = 420
   return (
     <canvas
       ref={canvasRef}
-      width={420}
-      height={420}
-      style={{ width: 420, height: 420 }}
+      width={SIZE}
+      height={SIZE}
+      style={{
+        width:  "min(80vmin, 420px)",
+        height: "min(80vmin, 420px)",
+      }}
     />
   )
 }
@@ -502,64 +545,70 @@ export default function VoiceChatPage() {
 
   return (
     <main
-      className="min-h-screen bg-black flex flex-col items-center justify-between"
+      className="h-[100dvh] w-full bg-black flex flex-col overflow-hidden"
       style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}
       dir="rtl"
     >
       {/* Header */}
-      <div className="w-full flex items-center justify-between px-6 py-5">
+      <div className="w-full flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 shrink-0">
         <button
           onClick={() => { stopAllAudio(); router.back() }}
           className="flex items-center gap-2 text-white/40 hover:text-white/80 transition-colors text-sm"
         >
-          <ArrowRight className="h-5 w-5" />
-          <span>رجوع</span>
+          <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
+          <span className="hidden sm:inline">رجوع</span>
         </button>
-        <span className="text-white/20 text-xs tracking-widest">MELEGY VOICE</span>
-        <div className="w-16" />
+        <span className="text-white/20 text-[10px] sm:text-xs tracking-widest">MELEGY VOICE</span>
+        <div className="w-10 sm:w-16" />
       </div>
 
-      {/* Orb */}
-      <div className="flex flex-col items-center flex-1 justify-center gap-5">
+      {/* Orb + labels — takes all remaining space */}
+      <div className="flex flex-col items-center justify-center flex-1 gap-3 sm:gap-5 px-4 min-h-0">
         <OrbCanvas orbStateRef={orbStateRef} analyserRef={analyserRef} />
 
-        <p className="text-base font-medium tracking-wide transition-colors duration-500"
-          style={{ color: labelColor }}>
+        <p
+          className="text-sm sm:text-base font-medium tracking-wide transition-colors duration-500"
+          style={{ color: labelColor }}
+        >
           {stateLabel}
         </p>
 
         {transcript && (
-          <div className="max-w-xs text-center px-4">
-            <span className="block text-white/25 text-xs mb-1">قلت</span>
-            <span className="text-white/55 text-sm leading-relaxed">{transcript}</span>
+          <div className="w-full max-w-xs sm:max-w-sm text-center px-4">
+            <span className="block text-white/25 text-[10px] sm:text-xs mb-1">قلت</span>
+            <span className="text-white/55 text-xs sm:text-sm leading-relaxed line-clamp-3">
+              {transcript}
+            </span>
           </div>
         )}
 
         {reply && (
-          <div className="max-w-xs text-center px-4">
-            <span className="block text-cyan-400/35 text-xs mb-1">ميليجي</span>
-            <span className="text-cyan-300/75 text-sm leading-relaxed">{reply}</span>
+          <div className="w-full max-w-xs sm:max-w-sm text-center px-4">
+            <span className="block text-cyan-400/35 text-[10px] sm:text-xs mb-1">ميليجي</span>
+            <span className="text-cyan-300/75 text-xs sm:text-sm leading-relaxed line-clamp-4">
+              {reply}
+            </span>
           </div>
         )}
 
         {errorMsg && (
-          <p className="text-red-400/80 text-sm px-6 text-center">{errorMsg}</p>
+          <p className="text-red-400/80 text-xs sm:text-sm px-6 text-center">{errorMsg}</p>
         )}
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col items-center gap-3 pb-14">
+      <div className="flex flex-col items-center gap-3 pb-8 sm:pb-14 shrink-0">
         {orbState === "idle" && (
           <button
             onClick={startListening}
-            className="flex items-center gap-3 px-8 py-4 rounded-full text-sm font-bold transition-all duration-200 active:scale-95"
+            className="flex items-center gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-full text-sm font-bold transition-all duration-200 active:scale-95"
             style={{
               background: "rgba(0,180,210,0.10)",
               color: "#67e8f9",
               border: "1px solid rgba(0,200,220,0.30)",
             }}
           >
-            <Mic className="h-5 w-5" />
+            <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
             ابدأ الكلام
           </button>
         )}
@@ -567,14 +616,14 @@ export default function VoiceChatPage() {
         {isRecording && (
           <button
             onClick={stopListening}
-            className="flex items-center gap-3 px-8 py-4 rounded-full text-sm font-bold transition-all duration-200 active:scale-95"
+            className="flex items-center gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-full text-sm font-bold transition-all duration-200 active:scale-95"
             style={{
               background: "rgba(220,38,38,0.12)",
               color: "#fca5a5",
               border: "1px solid rgba(220,38,38,0.30)",
             }}
           >
-            <MicOff className="h-5 w-5" />
+            <MicOff className="h-4 w-4 sm:h-5 sm:w-5" />
             اضغط لإيقاف التسجيل
           </button>
         )}
