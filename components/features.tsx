@@ -1,6 +1,6 @@
 "use client"
 
-import { ImageIcon } from "lucide-react"
+import { ImageIcon, Wand2, Film, Video } from "lucide-react"
 import { useApp } from "@/lib/contexts/AppContext"
 
 export function Features() {
@@ -16,6 +16,9 @@ export function Features() {
     { icon: "🎨", key: "imageGeneration" as const },
     { icon: "📊", key: "spreadsheets" as const },
     { icon: "🤔", key: "deepThinking" as const },
+    { icon: "wand", key: "imageEditing" as const },
+    { icon: "film", key: "imageAnimation" as const },
+    { icon: "video", key: "videoGeneration" as const },
   ]
 
   return (
@@ -29,7 +32,11 @@ export function Features() {
               className="group relative bg-gradient-to-br from-slate-900/50 to-slate-950/50 backdrop-blur-sm border border-slate-800/50 rounded-2xl p-8 hover:border-blue-500/50 transition-all duration-300 hover:scale-105"
             >
               <div className="text-5xl mb-4">
-                {feature.icon === "🖼️" ? <ImageIcon className="h-12 w-12 text-blue-400" /> : feature.icon}
+                {feature.icon === "🖼️" ? <ImageIcon className="h-12 w-12 text-blue-400" />
+                  : feature.icon === "wand" ? <Wand2 className="h-12 w-12 text-pink-400" />
+                  : feature.icon === "film" ? <Film className="h-12 w-12 text-purple-400" />
+                  : feature.icon === "video" ? <Video className="h-12 w-12 text-cyan-400" />
+                  : feature.icon}
               </div>
               <h3 className="text-xl font-bold text-white mb-3" dir={language === "ar" ? "rtl" : "ltr"}>
                 {featureText.title}

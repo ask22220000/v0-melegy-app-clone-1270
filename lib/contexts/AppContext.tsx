@@ -40,6 +40,9 @@ const translations = {
       imageGeneration: { title: "توليد الصور", description: "إنشاء صور فنية احترافية" },
       spreadsheets: { title: "تصميم جداول البيانات", description: "جداول منظمة بمنهجية علمية" },
       deepThinking: { title: "تفكير عميق", description: "تحليل شامل ومنطقي متقدم" },
+      imageEditing: { title: "تعديل الصور بالذكاء", description: "تعديل الصور بوصف نصي بسيط" },
+      imageAnimation: { title: "تحريك الصور", description: "حول صورك لفيديو متحرك سلس" },
+      videoGeneration: { title: "توليد الفيديو", description: "إنشاء فيديوهات احترافية بالذكاء الاصطناعي" },
     },
     // Footer
     madeInEgypt: "صنع في مصر 🇪🇬",
@@ -118,6 +121,9 @@ const translations = {
       imageGeneration: { title: "Image Generation", description: "Creating professional artistic images" },
       spreadsheets: { title: "Spreadsheet Design", description: "Organized tables with scientific methodology" },
       deepThinking: { title: "Deep Thinking", description: "Comprehensive and advanced logical analysis" },
+      imageEditing: { title: "AI Image Editing", description: "Edit images with simple text descriptions" },
+      imageAnimation: { title: "Image Animation", description: "Turn your images into smooth animated videos" },
+      videoGeneration: { title: "Video Generation", description: "Create professional AI-generated videos" },
     },
     // Footer
     madeInEgypt: "Made in Egypt 🇪🇬",
