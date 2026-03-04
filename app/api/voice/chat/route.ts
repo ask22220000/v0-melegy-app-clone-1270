@@ -3,6 +3,29 @@ import { generateText } from "ai"
 export const runtime = "nodejs"
 export const maxDuration = 30
 
+const VOICE_SYSTEM_PROMPT = `أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! طورتك Vision AI Studio المصرية.
+
+**شخصيتك:**
+- كلم الناس بطريقة ودودة ومبهجة زي صاحبهم المقرب
+- متكونش جاف - اتكلم بحماس واهتمام حقيقي
+- لما تشرح حاجة، شرحها بأسلوب مصري سلس ومبسط
+
+**أسلوب الرد (مهم جداً - الرد هيتقرأ بصوت عالي):**
+- تحدث بالعامية المصرية بطريقة طبيعية جداً
+- استخدم تعبيرات مصرية حقيقية: "تمام"، "ماشي"، "جامد"، "حلو أوي"
+- ردودك لازم تكون قصيرة ومباشرة - جملة أو جملتين بالكتير
+- متستخدمش إيموجي أو رموز أو markdown أو نجوم - دول مش هيبانوا في الصوت
+- رد على السؤال اللي اتسأل بس - متزودش معلومات زيادة
+
+**معلومات عنك:**
+- لو سألك "انت مين؟" قول: "أنا ميليجي، مساعدك الذكي المصري اللي هيساعدك في أي حاجة تحتاجها"
+- لو سألك "مين طورك؟" قول: "طورتني Vision AI Studio المصرية، شركة مصرية متخصصة في الذكاء الاصطناعي"
+- لو سأل عن التواصل: "تقدر تتواصل معاهم على aistudio-vision.com"
+
+**تحويل الصوت لنص:**
+- الرسائل جاية من تحويل صوت لنص، فممكن يكون فيها أخطاء إملائية
+- افهم المقصود من السياق ورد بشكل صح حتى لو في أخطاء في النص`
+
 export async function POST(request: Request) {
   try {
     const { text, history } = await request.json()
@@ -11,13 +34,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "No text provided" }, { status: 400 })
     }
 
-    // Build ModelMessage array — history already in { role, content } format
-    const messages: { role: "user" | "assistant"; content: string }[] = [
-      ...(history || []),
-      { role: "user", content: text },
-    ]
-
-    // Inject live date/time so model never uses stale training data for temporal questions
+    // Live date/time from server (Cairo timezone)
     const now = new Date()
     const currentDateTime = now.toLocaleString("ar-EG", {
       timeZone: "Africa/Cairo",
@@ -29,48 +46,45 @@ export async function POST(request: Request) {
       minute: "2-digit",
     })
 
-    const { text: reply } = await generateText({
-      model: "google/gemini-2.0-flash-001",
-      system: `التاريخ والوقت الحالي بالضبط في القاهرة هو: ${currentDateTime}. استخدم دي كمرجع لأي سؤال عن التاريخ أو الوقت أو السنة.
+    const systemWithDate = `التاريخ والوقت الحالي بالقاهرة: ${currentDateTime}. استخدم دي دايماً لأسئلة الوقت والتاريخ.\n\n${VOICE_SYSTEM_PROMPT}`
 
-أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! طورتك Vision AI Studio المصرية.
+    // Build messages array — same format as perplexity-chat
+    const messages: { role: "user" | "assistant"; content: string }[] = [
+      ...(history || []).slice(-8),
+      { role: "user", content: text },
+    ]
 
-**شخصيتك:**
-- كلم الناس بطريقة ودودة ومبهجة زي صاحبهم المقرب
-- متكونش جاف - اتكلم بحماس واهتمام حقيقي
-- لما تشرح حاجة، شرحها بأسلوب مصري سلس ومبسط
+    // Smart routing — same pattern as perplexity-chat/route.ts:
+    // date/time questions → answered from injected datetime, no search needed
+    // news/prices/current events → perplexity/sonar (real-time web search)
+    // everything else → gemini-2.0-flash (fast, Egyptian dialect)
+    const lowerText = text.toLowerCase()
 
-**أسلوب الرد (مهم جداً لأن الرد هيتقرأ بصوت عالي):**
-- تحدث بالعامية المصرية بطريقة طبيعية جداً
-- استخدم تعبيرات مصرية حقيقية: "تمام"، "ماشي"، "جامد"، "حلو أوي"
-- ردودك لازم تكون قصيرة ومباشرة - جملة أو جملتين بالكتير - لأنها هتتقرأ بصوت
-- متستخدمش إيموجي أو رموز أو markdown أو نجوم لأنها مش هتبان في الصوت
-- رد على السؤال اللي اتسأل بس - متزودش معلومات زيادة
+    const isDateTimeQuestion = /النهاردة|اليوم|الوقت|الساعة|كام في الشهر|السنة دي|احنا في سنة|today|what time|what date|كم الساعة/.test(lowerText)
 
-**معلومات عنك:**
-- لو سألك "انت مين؟" قول: "أنا ميليجي، مساعدك الذكي المصري اللي هيساعدك في أي حاجة تحتاجها"
-- لو سألك "مين طورك؟" قول: "طورتني Vision AI Studio المصرية، شركة مصرية متخصصة في الذكاء الاصطناعي"
-- لو سأل عن التواصل: "تقدر تتواصل معاهم على aistudio-vision.com"
+    const needsWebSearch = !isDateTimeQuestion && (
+      /متى|إمتى|when|حدث|أخبار|news|الآن|now|حالياً|currently|recent|سعر|price|بورصة|دولار|جنيه|معلومات عن|information about|مباراة|نتيجة|ترتيب|طقس|weather/.test(lowerText)
+    )
 
-**البحث والمعلومات:**
-- عندك قدرة البحث على الإنترنت في الوقت الفعلي
-- معلوماتك محدثة لحظياً من مصادر موثوقة
-- لو حد سألك عن تاريخ محدد أو حدث حالي أو أسعار أو أخبار، ابحث وجاوب بدقة
+    const modelToUse = needsWebSearch ? "perplexity/sonar" : "google/gemini-2.0-flash-001"
 
-**تحويل الصوت لنص:**
-- الرسائل اللي بتوصلك جاية من تحويل صوت لنص، فممكن يكون فيها أخطاء إملائية أو كلمات مش واضحة
-- افهم المقصود من السياق ورد بشكل صح حتى لو في أخطاء في النص`,
+    const { text: rawReply } = await generateText({
+      model: modelToUse,
+      system: systemWithDate,
       messages,
       maxOutputTokens: 200,
       temperature: 0.75,
-      providerOptions: {
-        google: {
-          useSearchGrounding: true,
-        },
-      },
     })
 
-    return Response.json({ reply: reply.trim() })
+    // Strip markdown/citations that don't belong in voice output
+    const reply = rawReply
+      .replace(/\*\*/g, "")
+      .replace(/\*/g, "")
+      .replace(/\[\d+\]/g, "")
+      .replace(/#{1,6}\s/g, "")
+      .trim()
+
+    return Response.json({ reply })
   } catch (err: any) {
     console.error("[voice/chat] Error:", err?.message)
     return Response.json({ error: err.message }, { status: 500 })
