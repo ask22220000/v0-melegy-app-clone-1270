@@ -17,9 +17,23 @@ export async function POST(request: Request) {
       { role: "user", content: text },
     ]
 
+    // Inject live date/time so model never uses stale training data for temporal questions
+    const now = new Date()
+    const currentDateTime = now.toLocaleString("ar-EG", {
+      timeZone: "Africa/Cairo",
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+
     const { text: reply } = await generateText({
       model: "google/gemini-2.0-flash-001",
-      system: `أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! طورتك Vision AI Studio المصرية.
+      system: `التاريخ والوقت الحالي بالضبط في القاهرة هو: ${currentDateTime}. استخدم دي كمرجع لأي سؤال عن التاريخ أو الوقت أو السنة.
+
+أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! طورتك Vision AI Studio المصرية.
 
 **شخصيتك:**
 - كلم الناس بطريقة ودودة ومبهجة زي صاحبهم المقرب
