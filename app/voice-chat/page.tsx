@@ -360,14 +360,16 @@ export default function VoiceChatPage() {
   }, [])
 
   // ── TTS: fetch audio → connect analyser → play ───────────────────────────
-  const speakReply = useCallback(async (text: string) => {
+  // tashkeelText: vowelized version for accurate Egyptian pronunciation (TTS only)
+  // displayText is shown on screen; tashkeelText is sent to ElevenLabs
+  const speakReply = useCallback(async (tashkeelText: string) => {
     setOrbState("speaking")
     orbStateRef.current = "speaking"
     try {
       const ttsRes = await fetch("/api/text-to-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: tashkeelText, speed: 1.2 }),
       })
       if (!ttsRes.ok) throw new Error(`TTS ${ttsRes.status}`)
       const arrayBuffer = await ttsRes.arrayBuffer()
@@ -463,16 +465,18 @@ export default function VoiceChatPage() {
       const data = await res.json()
       if (!res.ok || !data.reply) throw new Error(data.error || "فشل الرد")
       const replyText = data.reply.trim()
-      setReply(replyText)
+      // tashkeelReply: vowelized text for TTS pronunciation — fallback to plain reply
+      const tashkeelText = (data.tashkeelReply || replyText).trim()
+      setReply(replyText)  // display plain (no diacritics) on screen
 
       // Update history ref immediately (no stale closure issue)
       historyRef.current = [
         ...historyRef.current,
-        { role: "user",      content: sttText    },
-        { role: "assistant", content: replyText  },
+        { role: "user",      content: sttText   },
+        { role: "assistant", content: replyText },
       ]
 
-      await speakReply(replyText)
+      await speakReply(tashkeelText)  // send vowelized text to ElevenLabs
     } catch (e: any) {
       setErrorMsg(e.message)
       setOrbState("idle")
