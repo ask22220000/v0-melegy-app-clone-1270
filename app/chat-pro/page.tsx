@@ -247,19 +247,13 @@ export default function ChatProPage() {
       setMonthlyImages(Number.parseInt(savedImages || "0"))
     }
 
-    // Load chat histories — prefer localStorage, fallback to server (preserves media)
+    // Load chat histories from server only — no localStorage dependency
     try {
-      const savedHistories = localStorage.getItem("melegy_chat_histories_pro")
-      if (savedHistories) {
-        setChatHistories(JSON.parse(savedHistories))
-      } else {
-        const res = await fetch("/api/save-chat")
-        if (res.ok) {
-          const data = await res.json()
-          if (data.histories?.length > 0) {
-            setChatHistories(data.histories)
-            localStorage.setItem("melegy_chat_histories_pro", JSON.stringify(data.histories))
-          }
+      const res = await fetch("/api/save-chat")
+      if (res.ok) {
+        const data = await res.json()
+        if (data.histories?.length > 0) {
+          setChatHistories(data.histories)
         }
       }
     } catch (error) {
@@ -855,9 +849,7 @@ export default function ChatProPage() {
         messages: messages,
       }
 
-      const updated = [...chatHistories, newChat]
-      setChatHistories(updated)
-      localStorage.setItem("chatHistories", JSON.stringify(updated))
+      setChatHistories((prev) => [...prev, newChat])
 
       toast({
         title: "تم الحفظ",

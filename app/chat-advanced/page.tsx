@@ -262,17 +262,12 @@ export default function ChatAdvancedPage() {
   useEffect(() => {
     const loadHistories = async () => {
       try {
-        const savedHistories = localStorage.getItem("melegy_chat_histories_advanced")
-        if (savedHistories) {
-          setChatHistories(JSON.parse(savedHistories))
-        } else {
-          const res = await fetch("/api/save-chat")
-          if (res.ok) {
-            const data = await res.json()
-            if (data.histories?.length > 0) {
-              setChatHistories(data.histories)
-              localStorage.setItem("melegy_chat_histories_advanced", JSON.stringify(data.histories))
-            }
+        // Always load from server — no localStorage dependency
+        const res = await fetch("/api/save-chat")
+        if (res.ok) {
+          const data = await res.json()
+          if (data.histories?.length > 0) {
+            setChatHistories(data.histories)
           }
         }
       } catch (error) {
@@ -294,40 +289,41 @@ export default function ChatAdvancedPage() {
   }, [currentChatId])
 
   useEffect(() => {
-    if (messages.length > 0) {
+    // Auto-save to server on every message change (debounced: only when last message is from assistant)
+    const lastMsg = messages[messages.length - 1]
+    if (messages.length === 0 || lastMsg?.role !== "assistant") return
+
+    const firstUserMsg = messages.find((msg) => msg.role === "user")?.content || "محادثة جديدة"
+    const title = firstUserMsg.substring(0, 50)
+    const chatDate = new Date().toLocaleDateString("ar-EG")
+
+    const autoSave = async () => {
       try {
-        const firstUserMsg = messages.find((msg) => msg.role === "user")?.content || "محادثة جديدة"
-        const title = firstUserMsg.substring(0, 50)
-        const chatDate = new Date().toLocaleDateString("ar-EG")
-
-        const savedHistories = localStorage.getItem("melegy_chat_histories_advanced")
-        const currentHistories: ChatHistory[] = savedHistories ? JSON.parse(savedHistories) : []
-
-        const existingChatIndex = currentHistories.findIndex((chat) => chat.title === title && chat.date === chatDate)
-
-        let updatedHistories
-        if (existingChatIndex >= 0) {
-          updatedHistories = [...currentHistories]
-          updatedHistories[existingChatIndex] = {
-            ...updatedHistories[existingChatIndex],
-            messages: messages,
+        await fetch("/api/save-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_title: title,
+            chat_date: chatDate,
+            messages,
+          }),
+        })
+        // Update local state to reflect saved chat
+        setChatHistories((prev) => {
+          const existingIndex = prev.findIndex((c) => c.title === title && c.date === chatDate)
+          const updated = { id: Date.now().toString(), title, date: chatDate, messages }
+          if (existingIndex >= 0) {
+            const next = [...prev]
+            next[existingIndex] = updated
+            return next
           }
-        } else {
-          const newChat = {
-            id: Date.now().toString(),
-            title,
-            date: chatDate,
-            messages: messages,
-          }
-          updatedHistories = [newChat, ...currentHistories]
-        }
-
-        localStorage.setItem("melegy_chat_histories_advanced", JSON.stringify(updatedHistories))
-        setChatHistories(updatedHistories)
+          return [updated, ...prev]
+        })
       } catch (error) {
-        console.error("[v0] Error saving chat to localStorage:", error)
+        console.error("[v0] Error auto-saving chat to server:", error)
       }
     }
+    autoSave()
   }, [messages])
 
 
@@ -793,9 +789,7 @@ export default function ChatAdvancedPage() {
         messages: messages,
       }
 
-      const updated = [...chatHistories, newChat]
-      setChatHistories(updated)
-      localStorage.setItem("chatHistories", JSON.stringify(updated))
+      setChatHistories((prev) => [...prev, newChat])
 
       toast({
         title: "تم الحفظ",
