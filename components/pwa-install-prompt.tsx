@@ -15,44 +15,35 @@ export function PWAInstallPrompt() {
   const [isIOS, setIsIOS] = useState(false)
 
   useEffect(() => {
-    // Check if already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      console.log("[PWA] Already installed")
-      return
-    }
+    // Already installed as PWA — don't show prompt
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true
+    if (isStandalone) return
 
-    // Check if user dismissed before (only for 7 days)
+    // Respect user dismissal for 7 days
     const dismissedTime = localStorage.getItem("pwa-install-dismissed")
     if (dismissedTime) {
       const daysSinceDismissed = (Date.now() - parseInt(dismissedTime)) / (1000 * 60 * 60 * 24)
-      if (daysSinceDismissed < 7) {
-        console.log("[PWA] User dismissed recently")
-        return
-      }
+      if (daysSinceDismissed < 7) return
     }
 
-    // Detect iOS
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+    // iOS detection — covers iPhone, iPad (including iPad with iPadOS user agent)
+    const iOS =
+      (/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
     setIsIOS(iOS)
 
     if (iOS) {
-      // Show iOS specific prompt after 5 seconds
-      console.log("[PWA] iOS detected, showing prompt")
-      const timer = setTimeout(() => {
-        setShowPrompt(true)
-      }, 5000)
+      const timer = setTimeout(() => setShowPrompt(true), 5000)
       return () => clearTimeout(timer)
     }
 
-    // Handle Android/Chrome - prompt appears immediately when available
+    // Android / Chrome — capture beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
-      console.log("[PWA] beforeinstallprompt event fired")
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
-      // Show prompt after 5 seconds to not be too intrusive
-      setTimeout(() => {
-        setShowPrompt(true)
-      }, 5000)
+      setTimeout(() => setShowPrompt(true), 5000)
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
@@ -78,9 +69,7 @@ export function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false)
-    // Store timestamp instead of boolean for time-based re-showing
     localStorage.setItem("pwa-install-dismissed", Date.now().toString())
-    console.log("[PWA] User dismissed install prompt")
   }
 
   if (!showPrompt) {
