@@ -19,24 +19,30 @@ export const metadata: Metadata = {
   title: "Melegy - Egyptian AI Assistant",
   description: "مساعد ذكاء اصطناعي متطور يوفر لك إجابات دقيقة، بحث متقدم، وتوليد محتوى إبداعي",
   generator: "v0.app",
+  manifest: "/manifest.json",
   icons: {
     icon: [
-      {
-        url: "/images/logo.jpg",
-        sizes: "any",
-      },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: "/images/logo.jpg",
-    shortcut: "/images/logo.jpg",
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: "/icons/icon-192x192.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Melegy",
   },
   openGraph: {
     title: "Melegy - Egyptian AI Assistant",
     description: "مساعد ذكاء اصطناعي متطور يوفر لك إجابات دقيقة، بحث متقدم، وتوليد محتوى إبداعي",
     images: [
       {
-        url: "/images/logo.jpg",
-        width: 1200,
-        height: 1200,
+        url: "/icons/icon-512x512.png",
+        width: 512,
+        height: 512,
         alt: "Melegy - Egyptian AI Assistant",
       },
     ],
@@ -47,7 +53,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Melegy - Egyptian AI Assistant",
     description: "مساعد ذكاء اصطناعي متطور يوفر لك إجابات دقيقة، بحث متقدم، وتوليد محتوى إبداعي",
-    images: ["/images/logo.jpg"],
+    images: ["/icons/icon-512x512.png"],
   },
 }
 
@@ -59,15 +65,32 @@ export default function RootLayout({
   return (
     <html lang="ar" className="dark" suppressHydrationWarning>
       <head>
+        {/* PWA Core */}
         <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+
+        {/* Android PWA */}
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="Melegy" />
+
+        {/* iOS PWA — required for Add to Home Screen */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Melegy" />
-        <meta name="application-name" content="Melegy" />
-        <meta name="theme-color" content="#000000" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
-        <link rel="apple-touch-icon" href="/images/logo.jpg" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
+        {/* iOS Splash Screens — prevents white flash on launch */}
+        <meta name="apple-touch-fullscreen" content="yes" />
+        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
+
+        {/* Favicon */}
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
+        <link rel="shortcut icon" href="/icons/icon-192x192.png" />
+
+        {/* Service Worker Registration */}
         <script src="/register-sw.js" defer></script>
       </head>
       <body className={`${cairo.className} antialiased`} suppressHydrationWarning>
