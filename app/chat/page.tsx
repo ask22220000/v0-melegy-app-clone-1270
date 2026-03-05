@@ -12,7 +12,7 @@ import { UserIdModal } from "@/components/user-id-modal"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { UsageIndicator } from "@/components/usage-indicator"
-import { canSendMessage, canGenerateImage, incrementMessageUsage, incrementImageUsage, canAnimateVideo, incrementVideoUsage } from "@/lib/usage-tracker"
+import { canSendMessage, canGenerateImage, incrementMessageUsage, incrementImageUsage, canAnimateVideoSync, incrementVideoUsage } from "@/lib/usage-tracker"
 import {
   Send,
   Loader2,
@@ -120,7 +120,7 @@ export default function ChatPage() {
     if (!animateImageUrl || !animatePrompt.trim()) return
 
     // Check video animation limit
-    const videoCheck = canAnimateVideo()
+    const videoCheck = canAnimateVideoSync()
     if (!videoCheck.allowed) {
       toast({ title: "تجاوزت الحد المسموح", description: videoCheck.reason, variant: "destructive" })
       return
@@ -469,7 +469,7 @@ export default function ChatPage() {
   }
 
   const generateImageWithPrompt = async (userPrompt: string) => {
-    const imageCheck = canGenerateImage()
+    const imageCheck = await canGenerateImage()
     if (!imageCheck.allowed) {
       toast({
         title: "انتهت الصور اليومية",
@@ -567,7 +567,7 @@ export default function ChatPage() {
     e.preventDefault()
     if ((!input.trim() && !attachedImage) || isLoading) return
 
-    const messageCheck = canSendMessage()
+    const messageCheck = await canSendMessage()
     if (!messageCheck.allowed) {
       toast({
         title: "انتهت الرسائل اليومية",
@@ -583,7 +583,7 @@ export default function ChatPage() {
     setIsLoading(true)
 
     if (attachedImage && detectImageEditRequest(messageToSend, true)) {
-      const imageCheck = canGenerateImage()
+      const imageCheck = await canGenerateImage()
       if (!imageCheck.allowed) {
         toast({
           title: "انتهت الصور اليومية",

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowRight, MicOff, Mic } from "lucide-react"
-import { canUseVoiceChat, incrementVoiceUsage, getUsageStats } from "@/lib/usage-tracker"
+import { canUseVoiceChatSync, canUseVoiceChat, incrementVoiceUsage, fetchUsage, getUserPlan, PLAN_LIMITS } from "@/lib/usage-tracker"
 
 type OrbState = "idle" | "listening" | "thinking" | "speaking"
 
@@ -333,8 +333,13 @@ export default function VoiceChatPage() {
 
   // Load voice stats on mount
   useEffect(() => {
-    const s = getUsageStats()
-    setVoiceStats({ used: s.voice.used, limit: s.voice.limit })
+    fetchUsage().then((usage) => {
+      const plan = getUserPlan()
+      const limit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS].voiceMinutesPerDay
+      setVoiceStats({ used: usage.voice_minutes, limit })
+    }).catch(() => {
+      setVoiceStats({ used: 0, limit: -1 })
+    })
   }, [])
 
   // Keep orbState ref in sync
@@ -492,8 +497,8 @@ export default function VoiceChatPage() {
 
   // ── Start recording ───────────────────────────────────────────────────────
   const startListening = useCallback(async () => {
-    // Check voice chat time limit before starting
-    const voiceCheck = canUseVoiceChat()
+    // Check voice chat time limit before starting (sync — uses in-memory cache)
+    const voiceCheck = canUseVoiceChatSync()
     if (!voiceCheck.allowed) {
       setErrorMsg(voiceCheck.reason || "تجاوزت الحد المسموح للدردشة الصوتية اليوم")
       return
@@ -551,11 +556,15 @@ export default function VoiceChatPage() {
     // Track elapsed voice minutes for usage limit
     if (sessionStartRef.current !== null) {
       const elapsedMinutes = (Date.now() - sessionStartRef.current) / 60000
-      incrementVoiceUsage(elapsedMinutes)
       sessionStartRef.current = null
-      // Refresh displayed stats
-      const s = getUsageStats()
-      setVoiceStats({ used: s.voice.used, limit: s.voice.limit })
+      incrementVoiceUsage(elapsedMinutes).then(() => {
+        // Refresh displayed stats after saving
+        fetchUsage().then((usage) => {
+          const plan = getUserPlan()
+          const limit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS].voiceMinutesPerDay
+          setVoiceStats({ used: usage.voice_minutes, limit })
+        }).catch(() => {})
+      }).catch(() => {})
     }
   }, [])
 

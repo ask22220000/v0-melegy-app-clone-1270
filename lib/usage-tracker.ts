@@ -178,6 +178,27 @@ export async function canUseVoiceChat(): Promise<{ allowed: boolean; reason?: st
   return { allowed: true, remaining: limits.voiceMinutesPerDay - usage.voice_minutes }
 }
 
+/** Sync version — uses in-memory cache (no network call). Safe to call from event handlers. */
+export function canUseVoiceChatSync(): { allowed: boolean; reason?: string } {
+  const plan = getUserPlan()
+  const limits = PLAN_LIMITS[plan]
+  const usage = _cache
+  if (!usage) return { allowed: true } // no data yet — allow and recheck async
+  if (limits.voiceMinutesPerDay === -1) {
+    if (usage.voice_minutes >= VIP_ACTUAL_LIMITS.voiceMinutesPerDay) {
+      return { allowed: false, reason: `لقد وصلت للحد الأقصى للدردشة الصوتية اليوم في خطة ${limits.name}.` }
+    }
+    return { allowed: true }
+  }
+  if (usage.voice_minutes >= limits.voiceMinutesPerDay) {
+    return {
+      allowed: false,
+      reason: `لقد وصلت للحد الأقصى (${limits.voiceMinutesPerDay} دقيقة/يوم) في خطة ${limits.name}. قم بالترقية للمزيد!`,
+    }
+  }
+  return { allowed: true }
+}
+
 export async function canAnimateVideo(): Promise<{ allowed: boolean; reason?: string; remaining?: number }> {
   const plan = getUserPlan()
   const limits = PLAN_LIMITS[plan]
@@ -196,6 +217,27 @@ export async function canAnimateVideo(): Promise<{ allowed: boolean; reason?: st
     }
   }
   return { allowed: true, remaining: limits.animatedVideosPerDay - usage.animated_videos }
+}
+
+/** Sync version — uses in-memory cache (no network call). Safe to call from event handlers. */
+export function canAnimateVideoSync(): { allowed: boolean; reason?: string } {
+  const plan = getUserPlan()
+  const limits = PLAN_LIMITS[plan]
+  const usage = _cache
+  if (!usage) return { allowed: true } // no data yet — allow and recheck async
+  if (limits.animatedVideosPerDay === -1) {
+    if (usage.animated_videos >= VIP_ACTUAL_LIMITS.animatedVideosPerDay) {
+      return { allowed: false, reason: `لقد وصلت للحد الأقصى لتحريك الفيديو اليوم في خطة ${limits.name}.` }
+    }
+    return { allowed: true }
+  }
+  if (usage.animated_videos >= limits.animatedVideosPerDay) {
+    return {
+      allowed: false,
+      reason: `لقد وصلت للحد الأقصى (${limits.animatedVideosPerDay} فيديو/يوم) في خطة ${limits.name}. قم بالترقية للمزيد!`,
+    }
+  }
+  return { allowed: true }
 }
 
 export async function canUseWords(wordCount: number): Promise<{ allowed: boolean; reason?: string; remaining?: number }> {

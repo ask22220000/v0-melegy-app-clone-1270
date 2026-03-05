@@ -14,7 +14,7 @@ import { checkSubscriptionAccess } from "@/lib/subscription-check"
 import { setActiveSubscription } from "@/lib/set-subscription"
 import { UserIdModal } from "@/components/user-id-modal"
 import { useRouter } from "next/navigation"
-import { canSendMessage, canGenerateImage, incrementMessageUsage, incrementImageUsage, canAnimateVideo, incrementVideoUsage } from "@/lib/usage-tracker"
+import { canSendMessage, canGenerateImage, incrementMessageUsage, incrementImageUsage, canAnimateVideoSync, incrementVideoUsage } from "@/lib/usage-tracker"
 import {
   Send,
   Loader2,
@@ -131,7 +131,7 @@ export default function ChatProPage() {
 
   const handleAnimateImage = async () => {
     if (!animateImageUrl || !animatePrompt.trim()) return
-    const videoCheck = canAnimateVideo()
+    const videoCheck = canAnimateVideoSync()
     if (!videoCheck.allowed) {
       toast({ title: "تجاوزت الحد المسموح", description: videoCheck.reason, variant: "destructive" })
       return
@@ -374,7 +374,7 @@ export default function ChatProPage() {
 
   const generateImageWithPrompt = async (userPrompt: string) => {
     // Check image generation limits
-    const imageCheck = canGenerateImage()
+    const imageCheck = await canGenerateImage()
     if (!imageCheck.allowed) {
       toast({
         title: "وصلت للحد الأقصى",
@@ -521,7 +521,7 @@ export default function ChatProPage() {
     if (!input.trim() || isLoading) return
 
     // Check usage limits
-    const messageCheck = canSendMessage()
+    const messageCheck = await canSendMessage()
     if (!messageCheck.allowed) {
       toast({
         title: "وصلت للحد الأقصى",
