@@ -22,6 +22,8 @@ interface AnalyticsData {
   messagesPerMinute: number
   averageResponseTime: number
   activeUsers: number
+  pageviewsToday: number
+  visitorsToday: number
   featureUsage: {
     textGeneration: number
     imageGeneration: number
@@ -229,10 +231,10 @@ export default function DataPage() {
 
         {/* KPI row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <KpiCard label="نشط الآن"           value={fmt(data.activeUsersNow)}      sub="مستخدم متصل"          icon={<Users className="h-5 w-5" />}          accent={COLORS.green}  pulse />
-          <KpiCard label="إجمالي المستخدمين"  value={fmt(data.totalUsers)}           sub="منذ الإطلاق"           icon={<TrendingUp className="h-5 w-5" />}      accent={COLORS.blue} />
-          <KpiCard label="إجمالي الرسائل"     value={fmt(data.totalMessages)}        sub="كل الأوقات"            icon={<MessageSquare className="h-5 w-5" />}   accent={COLORS.cyan} />
-          <KpiCard label="إجمالي المحادثات"   value={fmt(data.totalConversations)}   sub="محادثة محفوظة"         icon={<Activity className="h-5 w-5" />}        accent={COLORS.purple} />
+          <KpiCard label="مستخدمون نشطون (24س)"  value={fmt(data.activeUsersNow)}         sub="آخر 24 ساعة"         icon={<Users className="h-5 w-5" />}         accent={COLORS.green}  pulse />
+          <KpiCard label="إجمالي المستخدمين"      value={fmt(data.totalUsers)}              sub="منذ الإطلاق"          icon={<TrendingUp className="h-5 w-5" />}     accent={COLORS.blue} />
+          <KpiCard label="إجمالي المحادثات"       value={fmt(data.totalConversations)}      sub="محادثة محفوظة"        icon={<MessageSquare className="h-5 w-5" />}  accent={COLORS.cyan} />
+          <KpiCard label="مشاهدات الصفحات اليوم"  value={data.pageviewsToday > 0 ? fmt(data.pageviewsToday) : "—"} sub={data.visitorsToday > 0 ? `${fmt(data.visitorsToday)} زائر فريد` : "يتطلب VERCEL_TOKEN"} icon={<Activity className="h-5 w-5" />} accent={COLORS.purple} />
         </div>
 
         {/* Tabs */}
