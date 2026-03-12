@@ -63,7 +63,7 @@ async function ensurePublicBlobUrl(imageUrl: string): Promise<string> {
 
 export async function POST(req: Request) {
   try {
-    const { imageUrl, prompt, generateAudio } = await req.json()
+    const { imageUrl, prompt, mode = "i2v" } = await req.json()
 
     if (!imageUrl) return NextResponse.json({ error: "imageUrl مطلوب" }, { status: 400 })
     if (!prompt) return NextResponse.json({ error: "prompt مطلوب" }, { status: 400 })
@@ -74,31 +74,41 @@ export async function POST(req: Request) {
     // 2. Ensure image is publicly accessible
     const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
 
-    // 3. Fixed prompt suffix — preserve faces/people/products identity 100%
-    const FACE_PRESERVE_SUFFIX =
-      "preserve exact facial features and identity of all people and products, photorealistic, consistent appearance, natural smooth cinematic motion, subtle gentle movement, no face distortion, no morphing, no warping, high fidelity"
+    let rawVideoUrl: string | undefined
 
-    const NEGATIVE_PROMPT =
-      "face distortion, face morphing, identity change, different person, altered appearance, deformed face, blurry face, low quality, watermark, text, duplicate, ugly, mutation, extra limbs, unrealistic motion, jerky motion"
+    if (mode === "r2v") {
+      // ===== مشهد جديد (مرجع) =====
+      // Uses subject_reference_image_url — generates a BRAND NEW scene from the prompt
+      // while preserving the person's identity/appearance from the reference image.
+      const result = await fal.subscribe("fal-ai/minimax/video-01-subject-reference", {
+        input: {
+          prompt: englishPrompt,
+          subject_reference_image_url: publicImageUrl,
+          prompt_optimizer: true,
+        },
+      }) as any
+      rawVideoUrl = result?.video?.url ?? result?.data?.video?.url ?? result?.videos?.[0]?.url
+    } else {
+      // ===== تحريك الصورة (i2v) =====
+      // Uses image_url as the FIRST FRAME — animates the existing image.
+      const FACE_PRESERVE_SUFFIX =
+        "preserve exact facial features and identity, photorealistic, smooth cinematic motion, no face distortion, no morphing, high fidelity"
+      const finalPrompt = `${englishPrompt}, ${FACE_PRESERVE_SUFFIX}`
 
-    const finalPrompt = `${englishPrompt}, ${FACE_PRESERVE_SUFFIX}`
-
-    // 4. Generate video via fal.ai — minimax hailuo-02-fast image-to-video (10s support)
-    const result = await fal.subscribe("fal-ai/minimax/hailuo-02-fast/image-to-video", {
-      input: {
-        image_url: publicImageUrl,
-        prompt: finalPrompt,
-        prompt_optimizer: true,
-        duration: "10",
-      },
-    }) as any
-
-    const rawVideoUrl: string | undefined =
-      result?.video?.url ?? result?.data?.video?.url ?? result?.videos?.[0]?.url
+      const result = await fal.subscribe("fal-ai/minimax/hailuo-02-fast/image-to-video", {
+        input: {
+          image_url: publicImageUrl,
+          prompt: finalPrompt,
+          prompt_optimizer: true,
+          duration: "10",
+        },
+      }) as any
+      rawVideoUrl = result?.video?.url ?? result?.data?.video?.url ?? result?.videos?.[0]?.url
+    }
 
     if (!rawVideoUrl) throw new Error("No video URL returned from model")
 
-    // 5. Fetch and save to Vercel Blob
+    // Save to Vercel Blob
     const vidRes = await fetch(rawVideoUrl)
     if (!vidRes.ok) throw new Error(`Cannot fetch video: ${vidRes.status}`)
     const vidBuffer = await vidRes.arrayBuffer()
