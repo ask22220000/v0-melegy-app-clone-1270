@@ -3,10 +3,7 @@ import * as fal from "@fal-ai/serverless-client"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
 
-export const maxDuration = 120
-
-// Configure fal at module level to avoid AI Gateway override
-fal.config({ credentials: process.env.FAL_KEY })
+export const maxDuration = 300
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -82,11 +79,15 @@ export async function POST(req: Request) {
     const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
 
     // 3. Generate video via fal.ai — fast-animatediff image-to-video
+    fal.config({ credentials: process.env.FAL_KEY })
+
+    // Fixed positive suffix: preserve faces/people identity 100%, natural cinematic motion
     const FACE_PRESERVE_SUFFIX =
       "preserve exact facial features and identity of all people, photorealistic face, consistent appearance, natural smooth cinematic motion, subtle gentle movement, realistic human movement, no face distortion, no morphing, no warping, high fidelity"
 
+    // Fixed negative prompt: prevent any face or identity alteration
     const NEGATIVE_PROMPT =
-      "face distortion, face morphing, identity change, different person, altered appearance, deformed face, blurry face, low quality, watermark, text, duplicate, ugly, mutation, extra limbs, unrealistic motion, jerky motion, fast motion"
+      "face distortion, face morphing, identity change, different person, altered appearance, deformed face, blurry face, low quality, watermark, text, duplicate, ugly, mutation, extra limbs, unrealistic motion, jerky motion, fast motion, ai-looking, artificial"
 
     const finalPrompt = `${englishPrompt}, ${FACE_PRESERVE_SUFFIX}`
 
@@ -95,15 +96,16 @@ export async function POST(req: Request) {
         image_url: publicImageUrl,
         prompt: finalPrompt,
         negative_prompt: NEGATIVE_PROMPT,
+        video_size: { width: 512, height: 512 },
         num_frames: 16,
         num_inference_steps: 20,
-        guidance_scale: 7.5,
+        guidance_scale: 9.0,
         fps: 8,
       },
     }) as any
 
     const rawVideoUrl: string | undefined =
-      result?.video?.url ?? result?.data?.video?.url
+      result?.video?.url ?? result?.data?.video?.url ?? result?.videos?.[0]?.url
 
     if (!rawVideoUrl) throw new Error("No video URL returned from model")
 
