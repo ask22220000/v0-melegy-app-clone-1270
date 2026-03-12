@@ -42,13 +42,8 @@ export async function POST(req: Request) {
 
     const enhancedPrompt = enhanceArabicPrompt(prompt)
 
-    console.log("[v0] Generating video with pollinations.ai...")
+    const videoUrl = `https://video.pollinations.ai/${encodeURIComponent(enhancedPrompt)}.mp4?width=1280&height=720&fps=24&duration=3`
 
-    const videoUrl = `https://video.pollinations.ai/${encodeURIComponent(
-      enhancedPrompt,
-    )}.mp4?width=1280&height=720&fps=24&duration=3`
-
-    console.log("[v0] Successfully generated video URL")
     return NextResponse.json({ videoUrl })
   } catch (error: any) {
     console.error("[v0] Video generation error:", error)

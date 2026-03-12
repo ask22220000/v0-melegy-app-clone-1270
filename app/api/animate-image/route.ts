@@ -79,44 +79,21 @@ export async function POST(req: Request) {
     // 2. Ensure the image is on Vercel Blob (Wan requires a public URL)
     const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
 
-    // 3. Generate video via Vercel AI Gateway + Wan
-    let result: Awaited<ReturnType<typeof generateVideo>>
-
-    if (mode === "r2v") {
-      // Reference-to-video: the uploaded image is the character reference
-      const finalPrompt = englishPrompt.toLowerCase().includes("character1")
-        ? englishPrompt
-        : `character1 ${englishPrompt}`
-
-      result = await generateVideo({
-        model: "alibaba/wan-v2.6-r2v",
-        prompt: finalPrompt,
-        duration: 10,
-        providerOptions: {
-          alibaba: {
-            referenceUrls: [publicImageUrl],
-            audio: false,
-            watermark: false,
-          },
+    // 3. Generate video via Vercel AI Gateway + Wan i2v
+    const result = await generateVideo({
+      model: "alibaba/wan-v2.6-i2v",
+      prompt: {
+        image: publicImageUrl,
+        text: englishPrompt,
+      },
+      duration: 10,
+      providerOptions: {
+        alibaba: {
+          audio: false,
+          watermark: false,
         },
-      })
-    } else {
-      // Image-to-video (default): animate the image directly
-      result = await generateVideo({
-        model: "alibaba/wan-v2.6-i2v",
-        prompt: {
-          image: publicImageUrl,
-          text: englishPrompt,
-        },
-        duration: 10,
-        providerOptions: {
-          alibaba: {
-            audio: false,
-            watermark: false,
-          },
-        },
-      })
-    }
+      },
+    })
 
     // 4. Save generated video to Vercel Blob for permanent hosting
     const videoData = result.videos?.[0]?.uint8Array
