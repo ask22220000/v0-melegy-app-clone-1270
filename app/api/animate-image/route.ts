@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import * as fal from "@fal-ai/serverless-client"
+import { fal } from "@fal-ai/client"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
 
@@ -78,20 +78,21 @@ export async function POST(req: Request) {
     // 2. Ensure the image is on Vercel Blob (Wan requires a public URL)
     const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
 
-    // 3. Generate video via fal.ai — Seedance v1.0 Pro (fast, no balance requirement)
+    // 3. Generate video via fal.ai — Kling v1 standard image-to-video
     fal.config({ credentials: process.env.FAL_KEY })
 
-    const result = await fal.subscribe("fal-ai/seedance/v1/pro/image-to-video", {
+    const result = await fal.subscribe("fal-ai/kling-video/v1/standard/image-to-video", {
       input: {
         image_url: publicImageUrl,
         prompt: englishPrompt,
-        resolution: "1080p",
-        duration: 10,
+        duration: "10",
+        negative_prompt: "blur, distort, and low quality",
+        cfg_scale: 0.5,
       },
     }) as any
 
     const rawVideoUrl: string | undefined =
-      result?.video?.url ?? result?.data?.video?.url ?? result?.videos?.[0]?.url
+      result?.data?.video?.url ?? result?.video?.url ?? result?.videos?.[0]?.url
 
     if (!rawVideoUrl) throw new Error("No video URL returned from model")
 
