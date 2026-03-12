@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server"
-import { experimental_generateVideo as generateVideo } from "ai"
+import * as fal from "@fal-ai/serverless-client"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
 
 export const maxDuration = 300
+
+// Configure fal at module level — prevents AI Gateway override
+fal.config({ credentials: process.env.FAL_KEY })
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -62,46 +65,44 @@ export async function POST(req: Request) {
   try {
     const { imageUrl, prompt, generateAudio } = await req.json()
 
-    if (!imageUrl) {
-      return NextResponse.json({ error: "imageUrl مطلوب" }, { status: 400 })
-    }
-    if (!prompt) {
-      return NextResponse.json({ error: "prompt مطلوب" }, { status: 400 })
-    }
+    if (!imageUrl) return NextResponse.json({ error: "imageUrl مطلوب" }, { status: 400 })
+    if (!prompt) return NextResponse.json({ error: "prompt مطلوب" }, { status: 400 })
 
     // 1. Translate Arabic prompt to English
     const englishPrompt = await translateToEnglish(prompt)
 
-    // 2. Ensure the image is on Vercel Blob (Seedance requires a public URL)
+    // 2. Ensure image is publicly accessible
     const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
 
-    // 3. Fixed prompt constants — preserve people/products identity 100%
+    // 3. Fixed prompt suffix — preserve faces/people/products identity 100%
     const FACE_PRESERVE_SUFFIX =
       "preserve exact facial features and identity of all people and products, photorealistic, consistent appearance, natural smooth cinematic motion, subtle gentle movement, no face distortion, no morphing, no warping, high fidelity"
 
+    const NEGATIVE_PROMPT =
+      "face distortion, face morphing, identity change, different person, altered appearance, deformed face, blurry face, low quality, watermark, text, duplicate, ugly, mutation, extra limbs, unrealistic motion, jerky motion"
+
     const finalPrompt = `${englishPrompt}, ${FACE_PRESERVE_SUFFIX}`
 
-    // 4. Generate video via Vercel AI Gateway — bytedance/seedance-v1.0-lite
-    const result = await generateVideo({
-      model: "bytedance/seedance-v1.0-lite",
-      prompt: {
-        image: publicImageUrl,
-        text: finalPrompt,
+    // 4. Generate video via fal.ai — minimax image-to-video (supports audio)
+    const result = await fal.subscribe("fal-ai/minimax/video-01/image-to-video", {
+      input: {
+        image_url: publicImageUrl,
+        prompt: finalPrompt,
+        prompt_optimizer: true,
       },
-      providerOptions: {
-        bytedance: {
-          generate_audio: generateAudio === true,
-          resolution: "480p",
-          duration: 5,
-        },
-      },
-    })
+    }) as any
 
-    // 5. Save to Vercel Blob for permanent hosting
-    const videoData = result.videos?.[0]?.uint8Array
-    if (!videoData) throw new Error("No video data returned from model")
+    const rawVideoUrl: string | undefined =
+      result?.video?.url ?? result?.data?.video?.url ?? result?.videos?.[0]?.url
 
-    const { url: videoUrl } = await put(`melegy-video-${Date.now()}.mp4`, videoData, {
+    if (!rawVideoUrl) throw new Error("No video URL returned from model")
+
+    // 5. Fetch and save to Vercel Blob
+    const vidRes = await fetch(rawVideoUrl)
+    if (!vidRes.ok) throw new Error(`Cannot fetch video: ${vidRes.status}`)
+    const vidBuffer = await vidRes.arrayBuffer()
+
+    const { url: videoUrl } = await put(`melegy-video-${Date.now()}.mp4`, Buffer.from(vidBuffer), {
       access: "public",
       contentType: "video/mp4",
     })
@@ -109,9 +110,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ videoUrl })
   } catch (error: any) {
     console.error("[animate-image] Error:", error?.message || error)
-    return NextResponse.json(
-      { error: "فشل توليد الفيديو. حاول مرة تانية." },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "فشل توليد الفيديو. حاول مرة تانية." }, { status: 500 })
   }
 }
