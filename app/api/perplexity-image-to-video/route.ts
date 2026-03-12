@@ -59,7 +59,7 @@ export async function POST(req: Request) {
           height: 512,
         },
         num_frames: 8,
-        num_inference_steps: 25,
+        num_inference_steps: 10,
         guidance_scale: 7.5,
       },
     })

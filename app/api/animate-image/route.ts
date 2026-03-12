@@ -3,8 +3,8 @@ import { experimental_generateVideo as generateVideo } from "ai"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
 
-// Allow up to 5 minutes for video generation
-export const maxDuration = 300
+// Max 40 seconds for video generation
+export const maxDuration = 40
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -79,18 +79,19 @@ export async function POST(req: Request) {
     // 2. Ensure the image is on Vercel Blob (Wan requires a public URL)
     const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
 
-    // 3. Generate video via Vercel AI Gateway + Wan i2v
+    // 3. Generate video via Vercel AI Gateway + Wan i2v (max 40s)
     const result = await generateVideo({
       model: "alibaba/wan-v2.6-i2v",
       prompt: {
         image: publicImageUrl,
         text: englishPrompt,
       },
-      duration: 10,
+      duration: 4,
       providerOptions: {
         alibaba: {
           audio: false,
           watermark: false,
+          resolution: "480p",
         },
       },
     })
