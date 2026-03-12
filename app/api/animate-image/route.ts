@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { experimental_generateVideo as generateVideo } from "ai"
+import * as fal from "@fal-ai/serverless-client"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
 
@@ -79,50 +79,30 @@ export async function POST(req: Request) {
     // 2. Ensure the image is on Vercel Blob (Wan requires a public URL)
     const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
 
-    // 3. Generate video via Vercel AI Gateway + Wan
-    let result: Awaited<ReturnType<typeof generateVideo>>
+    // 3. Configure fal.ai
+    fal.config({ credentials: process.env.FAL_KEY })
 
-    if (mode === "r2v") {
-      // Reference-to-video: the uploaded image is the character reference
-      const finalPrompt = englishPrompt.toLowerCase().includes("character1")
-        ? englishPrompt
-        : `character1 ${englishPrompt}`
+    // 4. Generate video via fal.ai kling-v2.5-turbo-i2v
+    const result = await fal.subscribe("klingai/kling-v2.5-turbo-i2v", {
+      input: {
+        image_url: publicImageUrl,
+        prompt: englishPrompt,
+        duration: "5",
+        aspect_ratio: "16:9",
+      },
+    }) as any
 
-      result = await generateVideo({
-        model: "alibaba/wan-v2.6-r2v",
-        prompt: finalPrompt,
-        duration: 10,
-        providerOptions: {
-          alibaba: {
-            referenceUrls: [publicImageUrl],
-            audio: false,
-            watermark: false,
-          },
-        },
-      })
-    } else {
-      // Image-to-video (default): animate the image directly
-      result = await generateVideo({
-        model: "alibaba/wan-v2.6-i2v",
-        prompt: {
-          image: publicImageUrl,
-          text: englishPrompt,
-        },
-        duration: 10,
-        providerOptions: {
-          alibaba: {
-            audio: false,
-            watermark: false,
-          },
-        },
-      })
-    }
+    const rawVideoUrl: string | undefined =
+      result?.data?.video?.url || result?.video?.url
 
-    // 4. Save generated video to Vercel Blob for permanent hosting
-    const videoData = result.videos?.[0]?.uint8Array
-    if (!videoData) throw new Error("No video data returned from model")
+    if (!rawVideoUrl) throw new Error("No video URL returned from kling model")
 
-    const { url: videoUrl } = await put(`melegy-video-${Date.now()}.mp4`, videoData, {
+    // 5. Save generated video to Vercel Blob for permanent hosting
+    const vidRes = await fetch(rawVideoUrl)
+    if (!vidRes.ok) throw new Error(`Cannot fetch video: ${vidRes.status}`)
+    const vidBuffer = await vidRes.arrayBuffer()
+
+    const { url: videoUrl } = await put(`melegy-video-${Date.now()}.mp4`, Buffer.from(vidBuffer), {
       access: "public",
       contentType: "video/mp4",
     })

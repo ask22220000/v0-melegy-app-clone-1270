@@ -1,55 +1,31 @@
+import * as fal from "@fal-ai/serverless-client"
 import { NextResponse } from "next/server"
+import Groq from "groq-sdk"
 
-async function translateToEnglish(arabicText: string): Promise<string> {
+export const maxDuration = 300
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
+async function translateToEnglish(prompt: string): Promise<string> {
+  const hasArabic = /[\u0600-\u06FF]/.test(prompt)
+  if (!hasArabic) return prompt
   try {
-    const response = await fetch(
-      `https://translate.googleapis.com/translate_a/element.js?cb=googleTranslateElementInit`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `client=gtx&sl=ar&tl=en&dt=t&q=${encodeURIComponent(arabicText)}`,
-      },
-    )
-
-    if (!response.ok) {
-      return arabicText
-    }
-
-    const text = await response.text()
-    const jsonMatch = text.match(/\[\[\["wrb\.fr","MkEWBc","[\s\S]*?",null,null,null,"generic"\]\]\]/)
-
-    if (!jsonMatch) {
-      return arabicText
-    }
-
-    const translation = jsonMatch[0]
-      .match(/"([^"]*)"/)?.[1]
-      ?.replace(/\\x([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-      ?.trim() || ""
-
-    return translation || arabicText
-  } catch (error) {
-    console.error("[v0] Translation error:", error)
-    return arabicText
+    const res = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a professional translator. Translate the following Arabic text (including Egyptian dialect) to English. Return ONLY the English translation.",
+        },
+        { role: "user", content: prompt },
+      ],
+      max_tokens: 200,
+    })
+    return res.choices[0]?.message?.content?.trim() || prompt
+  } catch {
+    return prompt
   }
-}
-
-async function generateVideo(translatedPrompt: string): Promise<string> {
-  console.log("[v0] Generating video with seedance-pro...")
-
-  const cleanPrompt = translatedPrompt
-    .replace(/[*#[\]{}()]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-
-  const seed = Math.floor(Math.random() * 999999)
-  const encodedPrompt = encodeURIComponent(cleanPrompt)
-
-  // Using Pollinations API with seedance-pro model for video generation
-  const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=seedance-pro&seed=${seed}`
-
-  console.log("[v0] Video URL:", videoUrl)
-  return videoUrl
 }
 
 export async function POST(req: Request) {
@@ -60,18 +36,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
     }
 
-    console.log("[v0] Video request:", prompt)
+    if (!process.env.FAL_KEY) {
+      return NextResponse.json({ error: "FAL_KEY is not configured" }, { status: 500 })
+    }
 
-    // Step 1: Translate to English
+    fal.config({ credentials: process.env.FAL_KEY })
+
     const englishPrompt = await translateToEnglish(prompt)
-    console.log("[v0] English prompt:", englishPrompt)
 
-    // Step 2: Generate video
-    const videoUrl = await generateVideo(englishPrompt)
+    const result = await fal.subscribe("klingai/kling-v2.5-turbo-t2v", {
+      input: {
+        prompt: englishPrompt,
+        duration: "5",
+        aspect_ratio: "16:9",
+      },
+    }) as any
+
+    const videoUrl: string | undefined =
+      result?.data?.video?.url || result?.video?.url
+
+    if (!videoUrl) {
+      throw new Error("No video URL returned from kling model")
+    }
 
     return NextResponse.json({ videoUrl })
   } catch (error: any) {
-    console.error("[v0] Video error:", error?.message || error)
+    console.error("[v0] kling text-to-video error:", error?.message || error)
     return NextResponse.json({ error: "Failed to generate video" }, { status: 500 })
   }
 }
