@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server"
-import { fal } from "@fal-ai/client"
+import * as fal from "@fal-ai/serverless-client"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
 
 export const maxDuration = 120
+
+// Configure fal at module level to avoid AI Gateway override
+fal.config({ credentials: process.env.FAL_KEY })
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -79,8 +82,6 @@ export async function POST(req: Request) {
     const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
 
     // 3. Generate video via fal.ai — fast-animatediff image-to-video
-    fal.config({ credentials: process.env.FAL_KEY })
-
     const FACE_PRESERVE_SUFFIX =
       "preserve exact facial features and identity of all people, photorealistic face, consistent appearance, natural smooth cinematic motion, subtle gentle movement, realistic human movement, no face distortion, no morphing, no warping, high fidelity"
 
@@ -99,10 +100,10 @@ export async function POST(req: Request) {
         guidance_scale: 7.5,
         fps: 8,
       },
-    })
+    }) as any
 
     const rawVideoUrl: string | undefined =
-      (result as any)?.video?.url ?? (result as any)?.data?.video?.url
+      result?.video?.url ?? result?.data?.video?.url
 
     if (!rawVideoUrl) throw new Error("No video URL returned from model")
 
