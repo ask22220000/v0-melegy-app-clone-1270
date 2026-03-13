@@ -79,12 +79,17 @@ export async function POST(req: Request) {
     if (mode === "r2v") {
       // ===== مشهد جديد (مرجع) =====
       // Uses subject_reference_image_url — generates a BRAND NEW scene from the prompt
-      // while preserving the person's identity/appearance from the reference image.
+      // while preserving the person's/product's identity and details from the reference image.
+      const REFERENCE_LOCK =
+        "The subject from the reference image must appear EXACTLY as shown: same face, same skin tone, same hair color and style, same body proportions, same clothing details, same product appearance — do NOT alter any physical detail of the subject. Only the scene, background, environment, and action change according to the prompt. Photorealistic, high fidelity, consistent identity throughout."
+
+      const finalR2VPrompt = `${englishPrompt}. ${REFERENCE_LOCK}`
+
       const result = await fal.subscribe("fal-ai/minimax/video-01-subject-reference", {
         input: {
-          prompt: englishPrompt,
+          prompt: finalR2VPrompt,
           subject_reference_image_url: publicImageUrl,
-          prompt_optimizer: true,
+          prompt_optimizer: false,
         },
       }) as any
       rawVideoUrl = result?.video?.url ?? result?.data?.video?.url ?? result?.videos?.[0]?.url
