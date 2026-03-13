@@ -23,7 +23,12 @@ export default function PrivacyPage() {
   const [activeSection, setActiveSection] = useState("introduction")
   const [lang, setLang] = useState<Lang>("ar")
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const observerRef = useRef<IntersectionObserver | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -51,6 +56,14 @@ export default function PrivacyPage() {
   }
 
   const isRTL = lang === "ar"
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#0d0d0f] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div
