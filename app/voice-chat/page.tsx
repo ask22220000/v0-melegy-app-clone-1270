@@ -463,7 +463,12 @@ export default function VoiceChatPage() {
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 },
+        audio: {
+          echoCancellation:    true,
+          noiseSuppression:    true,
+          autoGainControl:     true,
+          channelCount:        1,      // mono — smaller file, faster upload
+        },
       })
     } catch {
       setErrorMsg("لازم تسمح بالوصول للميكروفون")
