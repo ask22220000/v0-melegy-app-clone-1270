@@ -18,6 +18,9 @@ export function Features() {
     { icon: "🤔", key: "deepThinking" as const },
   ]
 
+  // Use RTL for Arabic (default), LTR for English
+  const dir = language === "ar" ? "rtl" : "ltr"
+
   return (
     <section className="container mx-auto px-6 pb-20">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
@@ -31,10 +34,10 @@ export function Features() {
               <div className="text-5xl mb-4">
                 {feature.icon === "🖼️" ? <ImageIcon className="h-12 w-12 text-blue-400" /> : feature.icon}
               </div>
-              <h3 className="text-xl font-bold text-white mb-3" dir={language === "ar" ? "rtl" : "ltr"}>
+              <h3 className="text-xl font-bold text-white mb-3" dir={dir} suppressHydrationWarning>
                 {featureText.title}
               </h3>
-              <p className="text-white/60 leading-relaxed" dir={language === "ar" ? "rtl" : "ltr"}>
+              <p className="text-white/60 leading-relaxed" dir={dir} suppressHydrationWarning>
                 {featureText.description}
               </p>
             </div>
