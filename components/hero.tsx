@@ -93,33 +93,33 @@ export function Hero() {
 
       {/* Android Guide Modal */}
       {showAndroidGuide && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-[#1a1f2e] border border-blue-500/30 rounded-2xl p-6 w-full max-w-sm" dir="rtl">
+        <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-blue-500/30 rounded-2xl p-6 w-full max-w-sm shadow-xl" dir="rtl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-bold text-lg">تثبيت التطبيق على Android</h3>
-              <button onClick={() => setShowAndroidGuide(false)} className="text-slate-400 hover:text-white">
+              <h3 className="text-gray-900 dark:text-white font-bold text-lg">تثبيت التطبيق على Android</h3>
+              <button onClick={() => setShowAndroidGuide(false)} className="text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">1</span>
-                <p className="text-slate-300 text-sm">افتح التطبيق في متصفح <strong className="text-white">Chrome</strong></p>
+                <p className="text-gray-600 dark:text-slate-300 text-sm">افتح التطبيق في متصفح <strong className="text-gray-900 dark:text-white">Chrome</strong></p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">2</span>
-                <p className="text-slate-300 text-sm">اضغط على <strong className="text-white">النقاط الثلاثة</strong> (القائمة) في أعلى يمين الشاشة</p>
+                <p className="text-gray-600 dark:text-slate-300 text-sm">اضغط على <strong className="text-gray-900 dark:text-white">النقاط الثلاثة</strong> (القائمة) في أعلى يمين الشاشة</p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">3</span>
-                <p className="text-slate-300 text-sm">اختار <strong className="text-white">"تثبيت التطبيق"</strong> أو <strong className="text-white">"Install app"</strong> أو <strong className="text-white">"Add to Home screen"</strong></p>
+                <p className="text-gray-600 dark:text-slate-300 text-sm">اختار <strong className="text-gray-900 dark:text-white">"تثبيت التطبيق"</strong> أو <strong className="text-gray-900 dark:text-white">"Install app"</strong> أو <strong className="text-gray-900 dark:text-white">"Add to Home screen"</strong></p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">4</span>
-                <p className="text-slate-300 text-sm">اضغط <strong className="text-white">Install</strong> وهيتثبت زي أي تطبيق تاني</p>
+                <p className="text-gray-600 dark:text-slate-300 text-sm">اضغط <strong className="text-gray-900 dark:text-white">Install</strong> وهيتثبت زي أي تطبيق تاني</p>
               </div>
             </div>
-            <p className="mt-4 text-xs text-slate-400 text-center">
+            <p className="mt-4 text-xs text-gray-500 dark:text-slate-400 text-center">
               لو مش شايف الخيار، جرب تفتح الموقع في نافذة جديدة أو تأكد إنك بتستخدم Chrome
             </p>
             <button
@@ -134,30 +134,30 @@ export function Hero() {
 
       {/* iOS Guide Modal */}
       {showIOSGuide && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center p-4">
-          <div className="bg-[#1a1f2e] border border-blue-500/30 rounded-2xl p-6 w-full max-w-sm" dir="rtl">
+        <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/80 flex items-end justify-center p-4">
+          <div className="bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-blue-500/30 rounded-2xl p-6 w-full max-w-sm shadow-xl" dir="rtl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-bold text-lg">تثبيت التطبيق على iOS</h3>
-              <button onClick={() => setShowIOSGuide(false)} className="text-slate-400 hover:text-white">
+              <h3 className="text-gray-900 dark:text-white font-bold text-lg">تثبيت التطبيق على iOS</h3>
+              <button onClick={() => setShowIOSGuide(false)} className="text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">1</span>
-                <p className="text-slate-300 text-sm">افتح التطبيق في متصفح <strong className="text-white">Safari</strong></p>
+                <p className="text-gray-600 dark:text-slate-300 text-sm">افتح التطبيق في متصفح <strong className="text-gray-900 dark:text-white">Safari</strong></p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">2</span>
-                <p className="text-slate-300 text-sm">اضغط على زرار <strong className="text-white">المشاركة</strong> (السهم للأعلى) في أسفل الشاشة</p>
+                <p className="text-gray-600 dark:text-slate-300 text-sm">اضغط على زرار <strong className="text-gray-900 dark:text-white">المشاركة</strong> (السهم للأعلى) في أسفل الشاشة</p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">3</span>
-                <p className="text-slate-300 text-sm">اختار <strong className="text-white">"Add to Home Screen"</strong> أو "أضف للشاشة الرئيسية"</p>
+                <p className="text-gray-600 dark:text-slate-300 text-sm">اختار <strong className="text-gray-900 dark:text-white">"Add to Home Screen"</strong> أو "أضف للشاشة الرئيسية"</p>
               </div>
               <div className="flex items-start gap-3">
                 <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">4</span>
-                <p className="text-slate-300 text-sm">اضغط <strong className="text-white">Add</strong> وهيتثبت زي أي تطبيق تاني</p>
+                <p className="text-gray-600 dark:text-slate-300 text-sm">اضغط <strong className="text-gray-900 dark:text-white">Add</strong> وهيتثبت زي أي تطبيق تاني</p>
               </div>
             </div>
             <button
