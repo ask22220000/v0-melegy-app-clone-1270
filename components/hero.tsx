@@ -14,6 +14,7 @@ export function Hero() {
   const [isIOS, setIsIOS] = useState(false)
   const [isAndroid, setIsAndroid] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [isInstalling, setIsInstalling] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -43,12 +44,17 @@ export function Hero() {
 
   const handleAndroidInstall = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      if (outcome === "accepted") {
-        setDeferredPrompt(null)
-        setShowBanner(false)
-        setIsInstalled(true)
+      setIsInstalling(true)
+      try {
+        deferredPrompt.prompt()
+        const { outcome } = await deferredPrompt.userChoice
+        if (outcome === "accepted") {
+          setDeferredPrompt(null)
+          setShowBanner(false)
+          setIsInstalled(true)
+        }
+      } finally {
+        setIsInstalling(false)
       }
     } else {
       // Fallback: show manual install guide for Android
@@ -207,18 +213,31 @@ export function Hero() {
           {/* Android */}
           <button
             onClick={handleAndroidInstall}
-            className="flex items-center gap-3 bg-white dark:bg-[#1a1f2e] hover:bg-gray-50 dark:hover:bg-[#222840] border border-gray-200 dark:border-slate-700 hover:border-blue-500/70 px-5 py-3 rounded-xl transition-all w-full sm:w-auto justify-center shadow-sm hover:shadow-md"
+            disabled={isInstalling}
+            className="flex items-center gap-3 bg-white dark:bg-[#1a1f2e] hover:bg-gray-50 dark:hover:bg-[#222840] border border-gray-200 dark:border-slate-700 hover:border-blue-500/70 px-5 py-3 rounded-xl transition-all w-full sm:w-auto justify-center shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-wait"
           >
-            <svg className="w-7 h-7 flex-shrink-0" viewBox="0 0 24 24" fill="none">
-              <path d="M3.18 23.76a2 2 0 0 0 2.18-.22l12.29-7.1-3.06-3.06-11.41 10.38z" fill="#EA4335"/>
-              <path d="M21.54 10.27a2 2 0 0 0 0 3.46l.02.01-2.34 1.35-3.28-3.28 3.28-3.28 2.32 1.74z" fill="#FBBC04"/>
-              <path d="M3.18.24C2.54.56 2 1.22 2 2.14v19.72c0 .92.54 1.58 1.18 1.9L14.6 12 3.18.24z" fill="#4285F4"/>
-              <path d="M3.18.24l11.41 11.76 3.06-3.06L5.36.46A2 2 0 0 0 3.18.24z" fill="#34A853"/>
-            </svg>
-            <div className="text-right">
-              <p className="text-xs text-gray-500 dark:text-gray-400">تنزيل مجاني</p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white">Android</p>
-            </div>
+            {isInstalling ? (
+              <>
+                <svg className="w-6 h-6 animate-spin text-blue-500" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+                <span className="text-sm font-bold text-gray-900 dark:text-white">جاري التثبيت...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-7 h-7 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                  <path d="M3.18 23.76a2 2 0 0 0 2.18-.22l12.29-7.1-3.06-3.06-11.41 10.38z" fill="#EA4335"/>
+                  <path d="M21.54 10.27a2 2 0 0 0 0 3.46l.02.01-2.34 1.35-3.28-3.28 3.28-3.28 2.32 1.74z" fill="#FBBC04"/>
+                  <path d="M3.18.24C2.54.56 2 1.22 2 2.14v19.72c0 .92.54 1.58 1.18 1.9L14.6 12 3.18.24z" fill="#4285F4"/>
+                  <path d="M3.18.24l11.41 11.76 3.06-3.06L5.36.46A2 2 0 0 0 3.18.24z" fill="#34A853"/>
+                </svg>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">تنزيل مجاني</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Android</p>
+                </div>
+              </>
+            )}
           </button>
 
           {/* iOS */}
