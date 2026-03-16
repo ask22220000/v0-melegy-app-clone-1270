@@ -10,6 +10,7 @@ export function Hero() {
   const { translations, language } = useApp()
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showIOSGuide, setShowIOSGuide] = useState(false)
+  const [showAndroidGuide, setShowAndroidGuide] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
   const [isAndroid, setIsAndroid] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
@@ -50,8 +51,8 @@ export function Hero() {
         setIsInstalled(true)
       }
     } else {
-      // Fallback: open Play Store listing if available
-      window.open("https://play.google.com/store/apps/details?id=com.melegy.app", "_blank")
+      // Fallback: show manual install guide for Android
+      setShowAndroidGuide(true)
     }
   }
 
@@ -79,6 +80,47 @@ export function Hero() {
               className="text-slate-400 hover:text-white p-1"
             >
               <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Android Guide Modal */}
+      {showAndroidGuide && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-[#1a1f2e] border border-blue-500/30 rounded-2xl p-6 w-full max-w-sm" dir="rtl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-bold text-lg">تثبيت التطبيق على Android</h3>
+              <button onClick={() => setShowAndroidGuide(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">1</span>
+                <p className="text-slate-300 text-sm">افتح التطبيق في متصفح <strong className="text-white">Chrome</strong></p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">2</span>
+                <p className="text-slate-300 text-sm">اضغط على <strong className="text-white">النقاط الثلاثة</strong> (القائمة) في أعلى يمين الشاشة</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">3</span>
+                <p className="text-slate-300 text-sm">اختار <strong className="text-white">"تثبيت التطبيق"</strong> أو <strong className="text-white">"Install app"</strong> أو <strong className="text-white">"Add to Home screen"</strong></p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="bg-blue-600 text-white text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0">4</span>
+                <p className="text-slate-300 text-sm">اضغط <strong className="text-white">Install</strong> وهيتثبت زي أي تطبيق تاني</p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-slate-400 text-center">
+              لو مش شايف الخيار، جرب تفتح الموقع في نافذة جديدة أو تأكد إنك بتستخدم Chrome
+            </p>
+            <button
+              onClick={() => setShowAndroidGuide(false)}
+              className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors"
+            >
+              تمام، فهمت
             </button>
           </div>
         </div>
