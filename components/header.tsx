@@ -60,9 +60,10 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
           onClick={toggleLanguage}
           className="bg-card backdrop-blur-md border-2 border-cyan-500/70 text-cyan-400 hover:text-cyan-300 hover:border-cyan-400 flex items-center gap-1.5 font-bold min-w-[52px]"
           aria-label={language === "ar" ? "Switch to English" : "Switch to Arabic"}
+          suppressHydrationWarning
         >
           <Languages className="h-4 w-4 shrink-0" />
-          <span className="text-xs">{translations.languageToggle}</span>
+          <span className="text-xs" suppressHydrationWarning>{translations.languageToggle}</span>
         </Button>
 
         {showHomeButton && (
@@ -71,9 +72,10 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
               variant="outline"
               size="sm"
               className="bg-background/20 backdrop-blur-md border-border/50 flex items-center gap-2 text-white hover:text-white"
+              suppressHydrationWarning
             >
               <Home className="h-4 w-4" />
-              <span className="hidden sm:inline">{translations.home}</span>
+              <span className="hidden sm:inline" suppressHydrationWarning>{translations.home}</span>
             </Button>
           </Link>
         )}
@@ -84,9 +86,10 @@ export function Header({ showChatHistory = false, onChatHistoryClick, showHomeBu
             size="sm"
             onClick={onChatHistoryClick}
             className="bg-background/20 backdrop-blur-md border-border/50 flex items-center gap-2 text-white hover:text-white"
+            suppressHydrationWarning
           >
             <MessageSquare className="h-4 w-4" />
-            <span className="hidden sm:inline">{translations.history}</span>
+            <span className="hidden sm:inline" suppressHydrationWarning>{translations.history}</span>
           </Button>
         )}
       </div>
