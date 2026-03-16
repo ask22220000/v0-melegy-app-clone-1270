@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable static export for Capacitor (uncomment when building for iOS/Android)
-  // output: 'export',
   typescript: {
     ignoreBuildErrors: true,
   },
