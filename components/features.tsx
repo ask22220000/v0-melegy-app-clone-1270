@@ -4,7 +4,7 @@ import { ImageIcon } from "lucide-react"
 import { useApp } from "@/lib/contexts/AppContext"
 
 export function Features() {
-  const { translations } = useApp()
+  const { translations, language } = useApp()
 
   const features = [
     { icon: "🖼️", key: "imageAnalysis" as const },
@@ -19,7 +19,7 @@ export function Features() {
   ]
 
   return (
-    <section className="container mx-auto px-6 pb-20" suppressHydrationWarning>
+    <section className="container mx-auto px-6 pb-20">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
         {features.map((feature, index) => {
           const featureText = translations.features[feature.key]
@@ -27,15 +27,14 @@ export function Features() {
             <div
               key={index}
               className="group relative bg-gradient-to-br from-slate-900/50 to-slate-950/50 backdrop-blur-sm border border-slate-800/50 rounded-2xl p-8 hover:border-blue-500/50 transition-all duration-300 hover:scale-105"
-              suppressHydrationWarning
             >
               <div className="text-5xl mb-4">
                 {feature.icon === "🖼️" ? <ImageIcon className="h-12 w-12 text-blue-400" /> : feature.icon}
               </div>
-              <h3 className="text-xl font-bold text-white mb-3" dir="rtl" suppressHydrationWarning>
+              <h3 className="text-xl font-bold text-white mb-3" dir={language === "ar" ? "rtl" : "ltr"}>
                 {featureText.title}
               </h3>
-              <p className="text-white/60 leading-relaxed" dir="rtl" suppressHydrationWarning>
+              <p className="text-white/60 leading-relaxed" dir={language === "ar" ? "rtl" : "ltr"}>
                 {featureText.description}
               </p>
             </div>

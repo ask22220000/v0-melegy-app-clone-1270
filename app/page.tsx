@@ -11,7 +11,7 @@ export default function HomePage() {
   const { translations, language } = useApp()
 
   return (
-    <div className="min-h-screen bg-background homepage-dark-bg" dir="rtl" suppressHydrationWarning>
+    <div className="min-h-screen bg-background homepage-dark-bg" dir={language === "ar" ? "rtl" : "ltr"}>
       <Header />
       <Hero />
       <Features />
@@ -20,7 +20,7 @@ export default function HomePage() {
           href="/pricing"
           className="inline-block bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-4 px-8 rounded-xl hover:from-cyan-600 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg"
         >
-          <span suppressHydrationWarning>{translations.pricingLink}</span>
+          {translations.pricingLink}
         </Link>
       </div>
       <Footer />

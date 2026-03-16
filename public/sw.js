@@ -1,15 +1,12 @@
-// Melegy PWA Service Worker — Network-First with aggressive updates
-// Version: Change this on every deploy to force cache refresh
-const SW_VERSION = '2.4.1';
-const CACHE_NAME = 'melegy-cache-v' + SW_VERSION;
+// Melegy PWA Service Worker — Network-First, auto-update on every deploy
+// Cache name includes a build timestamp so every new deploy = new cache = instant update
+const CACHE_VERSION = '__MELEGY_BUILD_' + (self.__BUILD_ID || Date.now()) + '__';
+const CACHE_NAME = 'melegy-v' + CACHE_VERSION;
 
 // Routes that must NEVER be served from cache
 const NETWORK_ONLY_PATTERNS = [
   /^\/api\//,
   /^\/auth\//,
-  /\/_next\//,  // Next.js assets - always fresh
-  /\.js$/,      // JavaScript files - always fresh
-  /\.css$/,     // CSS files - always fresh
 ];
 
 // Only cache these truly static assets (images/icons/fonts — they don't change with code)
@@ -61,20 +58,10 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (request.method !== 'GET') return;
 
-  // Navigation requests (HTML pages): Always network-first, no cache
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => caches.match('/') || Response.error())
-    );
-    return;
-  }
-
-  // API / auth / JS / CSS: always network, never cache
+  // API / auth: always network, never cache
   const isNetworkOnly = NETWORK_ONLY_PATTERNS.some((p) => p.test(url.pathname));
   if (isNetworkOnly) {
-    event.respondWith(
-      fetch(request).catch(() => Response.error())
-    );
+    event.respondWith(fetch(request));
     return;
   }
 
@@ -96,8 +83,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else: Network-First with cache fallback only for offline
+  // Everything else (HTML pages, JS, CSS): Network-First — always get fresh code
+  // Falls back to cache only if offline
   event.respondWith(
-    fetch(request).catch(() => caches.match(request))
+    fetch(request)
+      .then((response) => {
+        // Update cache with latest version in background
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(() =>
+        // Offline fallback: serve from cache if available
+        caches.match(request).then((cached) => cached || caches.match('/').then((r) => r || Response.error()))
+      )
   );
 });
