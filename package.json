@@ -6,10 +6,15 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "build:ios": "next build && npx cap sync ios",
+    "build:android": "next build && npx cap sync android",
+    "open:ios": "npx cap open ios",
+    "open:android": "npx cap open android"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.0",
+    "@capacitor/cli": "^8.2.0",
     "@fal-ai/client": "1.7.2",
     "@fal-ai/serverless-client": "latest",
     "@google/generative-ai": "0.24.1",
