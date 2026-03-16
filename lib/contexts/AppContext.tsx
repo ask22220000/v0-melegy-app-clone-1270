@@ -11,6 +11,7 @@ type AppContextType = {
   theme: Theme
   setTheme: (theme: Theme) => void
   translations: typeof translations.ar
+  isHydrated: boolean
 }
 
 const translations = {
@@ -173,16 +174,22 @@ const AppContext = createContext<AppContextType | undefined>(undefined)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>("ar")
   const [theme, setThemeState] = useState<Theme>("dark")
+  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-
+    // Mark as hydrated first
+    setIsHydrated(true)
+    
     try {
       const savedLang = localStorage.getItem("language") as Language
       const savedTheme = localStorage.getItem("theme") as Theme
 
-      if (savedLang) setLanguageState(savedLang)
-      if (savedTheme) setThemeState(savedTheme)
+      if (savedLang && (savedLang === "ar" || savedLang === "en")) {
+        setLanguageState(savedLang)
+      }
+      if (savedTheme && (savedTheme === "dark" || savedTheme === "light")) {
+        setThemeState(savedTheme)
+      }
     } catch {
       // silently ignore localStorage errors
     }
@@ -223,6 +230,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         theme,
         setTheme,
         translations: translations[language],
+        isHydrated,
       }}
     >
       {children}
