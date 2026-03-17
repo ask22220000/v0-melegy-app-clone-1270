@@ -218,14 +218,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // During SSR and initial hydration, always use the default language ("ar") translations
+  // to ensure server and client render the same content. After mounting, use the actual language.
+  const currentTranslations = mounted ? translations[language] : translations.ar
+  const currentLanguage = mounted ? language : "ar"
+
   return (
     <AppContext.Provider
       value={{
-        language,
+        language: currentLanguage,
         setLanguage,
         theme,
         setTheme,
-        translations: translations[language],
+        translations: currentTranslations,
         mounted,
       }}
     >
