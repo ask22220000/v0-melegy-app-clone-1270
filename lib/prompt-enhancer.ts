@@ -11,6 +11,17 @@
  */
 const EGYPTIAN_FOOD_DICTIONARY: Record<string, string> = {
   // CRITICAL Egyptian foods - very specific descriptions for AI accuracy
+  
+  // BOTTARGA / FISH ROE - VERY IMPORTANT - NOT whole fish!
+  "بطارخ": "bottarga (cured fish roe, salted and dried fish eggs, NOT whole fish - it is the egg sac/roe only, amber-orange colored, firm texture)",
+  "البطارخ": "bottarga (cured fish roe, salted and dried mullet eggs, amber-orange colored egg sac)",
+  "بطارخ الخرز": "loose fish roe caviar beads (individual tiny glistening orange-amber fish eggs/caviar pearls, NOT whole fish - these are small spherical shiny roe beads like salmon roe or tobiko, each bead is round and translucent orange, packed together in a container)",
+  "بطارخ خرز": "loose fish roe caviar beads (individual tiny glistening orange-amber fish eggs/caviar pearls, small spherical shiny roe beads, each bead is round and translucent orange)",
+  "الخرز": "roe beads/pearls (small round glistening fish egg spheres, caviar-like orange beads)",
+  "خرز": "beads/pearls (small round spherical items)",
+  "علبة البطارخ": "container of fish roe caviar (glass jar or container filled with glistening orange-amber fish egg beads/pearls)",
+  
+  // FESIKH - salted fermented fish
   "فسيخ": "fesikh (traditional Egyptian salted fermented fish, grey-silver boneless fish fillets preserved in salt brine, similar to sardines or mullet)",
   "الفسيخ": "fesikh (traditional Egyptian salted fermented fish, grey-silver boneless fish fillets preserved in salt brine)",
   "فسيخ مخلي": "boneless fesikh fillets (grey-silver fish fillets without bones, Egyptian salted fish)",
@@ -186,6 +197,8 @@ export async function processPromptForImageGeneration(userPrompt: string): Promi
   const system = `You are a professional prompt engineer for AI image generation (Flux model). Your goal: create prompts for HYPER-REALISTIC EGYPTIAN FOOD PHOTOGRAPHY — as if captured by a professional food photographer with a real DSLR camera.
 
 CRITICAL EGYPTIAN FOOD KNOWLEDGE:
+- "بطارخ الخرز" (bottarga beads/fish roe caviar) = Individual small ROUND GLISTENING FISH EGGS (like salmon roe or tobiko caviar). They are ORANGE-AMBER colored SPHERICAL BEADS that are translucent and shiny. This is NOT whole fish! It is loose fish roe/caviar pearls packed in a container. Each bead is small, round, and glistens.
+- "بطارخ" (bottarga) = Cured fish roe (egg sac), amber-orange colored, NOT whole fish.
 - "فسيخ" (fesikh) = Traditional Egyptian salted fermented FISH. It is GREY-SILVER colored boneless fish fillets (similar to sardines/mullet), NOT orange vegetables or squash. The fish is preserved in salt and has a distinctive grey metallic sheen.
 - "عيش بلدي" (baladi bread) = Traditional Egyptian round FLATBREAD. It is PUFFY with an air pocket inside, LIGHT BROWN color with DARK BROWN charred spots, rough rustic texture. It is NOT Western bread, NOT brioche, NOT smooth bread. Always shown in traditional woven baskets.
 - "بيئة مصرية" (Egyptian setting) = Traditional Egyptian market/street setting with: rustic weathered wooden tables, woven straw baskets, terracotta pottery, old Cairo architecture, warm sunlight, traditional market stalls in background.
