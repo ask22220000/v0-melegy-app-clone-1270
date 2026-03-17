@@ -12,9 +12,11 @@
 const EGYPTIAN_FOOD_DICTIONARY: Record<string, string> = {
   // CRITICAL Egyptian foods - very specific descriptions for AI accuracy
   
-  // BOTTARGA / FISH ROE - VERY IMPORTANT - NOT whole fish!
-  "بطارخ": "bottarga (cured fish roe, salted and dried fish eggs, NOT whole fish - it is the egg sac/roe only, amber-orange colored, firm texture)",
-  "البطارخ": "bottarga (cured fish roe, salted and dried mullet eggs, amber-orange colored egg sac)",
+  // BOTTARGA / FISH ROE - VERY IMPORTANT - NOT whole fish, NOT jelly, NOT smooth texture!
+  "بطارخ": "bottarga (cured pressed fish roe sac - when CUT/SLICED it shows GRAINY TEXTURE of thousands of tiny compressed fish eggs visible inside, NOT smooth jelly texture, the cross-section reveals densely packed granular fish eggs, amber-orange-brown color, firm but grainy interior)",
+  "البطارخ": "bottarga (cured pressed fish roe sac with VISIBLE GRANULAR TEXTURE of compressed fish eggs inside when sliced)",
+  "قطعة بطارخ": "a piece of bottarga (cured fish roe sac - when cut open shows GRAINY TEXTURE of densely packed tiny fish eggs, NOT smooth, the interior has visible granular compressed roe texture, amber-golden-brown color)",
+  "بطارخ مقطوعة": "sliced bottarga showing GRAINY CROSS-SECTION with visible compressed fish egg granules inside, NOT smooth or jelly-like",
   "بطارخ الخرز": "loose fish roe caviar beads (individual tiny glistening orange-amber fish eggs/caviar pearls, NOT whole fish - these are small spherical shiny roe beads like salmon roe or tobiko, each bead is round and translucent orange, packed together in a container)",
   "بطارخ خرز": "loose fish roe caviar beads (individual tiny glistening orange-amber fish eggs/caviar pearls, small spherical shiny roe beads, each bead is round and translucent orange)",
   "الخرز": "roe beads/pearls (small round glistening fish egg spheres, caviar-like orange beads)",
@@ -197,8 +199,8 @@ export async function processPromptForImageGeneration(userPrompt: string): Promi
   const system = `You are a professional prompt engineer for AI image generation (Flux model). Your goal: create prompts for HYPER-REALISTIC EGYPTIAN FOOD PHOTOGRAPHY — as if captured by a professional food photographer with a real DSLR camera.
 
 CRITICAL EGYPTIAN FOOD KNOWLEDGE:
+- "بطارخ" (bottarga) = Cured PRESSED fish roe sac. When SLICED or CUT, the cross-section MUST show GRAINY TEXTURE with thousands of tiny compressed fish eggs visible inside. It is NOT smooth, NOT jelly-like, NOT homogeneous - the interior has a GRANULAR appearance from the densely packed fish eggs. Color is amber-orange-brown. The texture is firm but clearly shows the individual compressed roe granules.
 - "بطارخ الخرز" (bottarga beads/fish roe caviar) = Individual small ROUND GLISTENING FISH EGGS (like salmon roe or tobiko caviar). They are ORANGE-AMBER colored SPHERICAL BEADS that are translucent and shiny. This is NOT whole fish! It is loose fish roe/caviar pearls packed in a container. Each bead is small, round, and glistens.
-- "بطارخ" (bottarga) = Cured fish roe (egg sac), amber-orange colored, NOT whole fish.
 - "فسيخ" (fesikh) = Traditional Egyptian salted fermented FISH. It is GREY-SILVER colored boneless fish fillets (similar to sardines/mullet), NOT orange vegetables or squash. The fish is preserved in salt and has a distinctive grey metallic sheen.
 - "عيش بلدي" (baladi bread) = Traditional Egyptian round FLATBREAD. It is PUFFY with an air pocket inside, LIGHT BROWN color with DARK BROWN charred spots, rough rustic texture. It is NOT Western bread, NOT brioche, NOT smooth bread. Always shown in traditional woven baskets.
 - "بيئة مصرية" (Egyptian setting) = Traditional Egyptian market/street setting with: rustic weathered wooden tables, woven straw baskets, terracotta pottery, old Cairo architecture, warm sunlight, traditional market stalls in background.
