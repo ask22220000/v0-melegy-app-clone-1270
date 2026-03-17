@@ -10,8 +10,18 @@ import { useApp } from "@/lib/contexts/AppContext"
 export default function HomePage() {
   const { translations, language, mounted } = useApp()
 
-  // Use consistent default during SSR to prevent hydration mismatch
-  const dir = mounted ? (language === "ar" ? "rtl" : "ltr") : "rtl"
+  const dir = language === "ar" ? "rtl" : "ltr"
+
+  // Show loading state until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background homepage-dark-bg" dir="rtl">
+        <div className="animate-pulse">
+          <Header />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background homepage-dark-bg" dir={dir}>

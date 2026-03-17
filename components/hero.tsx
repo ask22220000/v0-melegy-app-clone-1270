@@ -9,8 +9,7 @@ import { useEffect, useState, useRef } from "react"
 export function Hero() {
   const { translations, language, mounted } = useApp()
 
-  // Use consistent default during SSR to prevent hydration mismatch
-  const dir = mounted ? (language === "ar" ? "rtl" : "ltr") : "rtl"
+  const dir = language === "ar" ? "rtl" : "ltr"
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showIOSGuide, setShowIOSGuide] = useState(false)
   const [showAndroidGuide, setShowAndroidGuide] = useState(false)
@@ -66,6 +65,26 @@ export function Hero() {
   }
 
   const isMobile = isIOS || isAndroid
+
+  // Don't render text content until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <section className="container mx-auto px-6 pt-32 pb-20 text-center">
+        <div className="flex justify-center mb-12">
+          <div className="relative">
+            <div className="absolute inset-0 bg-blue-600/30 rounded-full blur-3xl" />
+            <div className="relative w-48 h-48 rounded-full bg-gradient-to-br from-blue-900/80 to-blue-950/80 backdrop-blur-xl border border-blue-500/30 flex items-center justify-center overflow-hidden">
+              <div className="w-full h-full bg-slate-700 animate-pulse" />
+            </div>
+          </div>
+        </div>
+        <div className="h-16 bg-slate-700/50 rounded-lg w-64 mx-auto mb-6 animate-pulse" />
+        <div className="h-8 bg-slate-700/50 rounded-lg w-96 mx-auto mb-4 animate-pulse" />
+        <div className="h-6 bg-slate-700/50 rounded-lg w-32 mx-auto mb-8 animate-pulse" />
+        <div className="h-6 bg-slate-700/50 rounded-lg w-[600px] max-w-full mx-auto mb-12 animate-pulse" />
+      </section>
+    )
+  }
 
   return (
     <section className="container mx-auto px-6 pt-32 pb-20 text-center">
