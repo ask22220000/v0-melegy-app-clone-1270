@@ -1,4 +1,4 @@
-import { getServiceRoleClient } from "./getSupabase()/server"
+import { getServiceRoleClient } from "./supabase/server"
 
 // Lazy getter for getSupabase() client to prevent build-time errors
 function getSupabase() {
