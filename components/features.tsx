@@ -19,7 +19,7 @@ export function Features() {
   ]
 
   return (
-    <section className="container mx-auto px-6 pb-20">
+    <section className="container mx-auto px-6 pb-20" suppressHydrationWarning>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
         {features.map((feature, index) => {
           const featureText = translations.features[feature.key]
@@ -31,10 +31,10 @@ export function Features() {
               <div className="text-5xl mb-4">
                 {feature.icon === "🖼️" ? <ImageIcon className="h-12 w-12 text-blue-400" /> : feature.icon}
               </div>
-              <h3 className="text-xl font-bold text-white mb-3" dir={language === "ar" ? "rtl" : "ltr"}>
+              <h3 className="text-xl font-bold text-white mb-3" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
                 {featureText.title}
               </h3>
-              <p className="text-white/60 leading-relaxed" dir={language === "ar" ? "rtl" : "ltr"}>
+              <p className="text-white/60 leading-relaxed" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
                 {featureText.description}
               </p>
             </div>

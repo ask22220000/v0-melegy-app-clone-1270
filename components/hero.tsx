@@ -65,7 +65,7 @@ export function Hero() {
   const isMobile = isIOS || isAndroid
 
   return (
-    <section className="container mx-auto px-6 pt-32 pb-20 text-center">
+    <section className="container mx-auto px-6 pt-32 pb-20 text-center" suppressHydrationWarning>
       {/* PWA Install Banner (Android) */}
       {showBanner && !isInstalled && (
         <div className="fixed bottom-4 left-4 right-4 z-50 bg-[#1a1f2e] border border-blue-500/40 rounded-2xl p-4 flex items-center gap-3 shadow-2xl shadow-blue-900/40 max-w-sm mx-auto">
@@ -188,13 +188,14 @@ export function Hero() {
       <p
         className="text-2xl md:text-3xl text-white mb-4 font-semibold text-center"
         dir={language === "ar" ? "rtl" : "ltr"}
+        suppressHydrationWarning
       >
         {translations.heroSubtitle}
       </p>
 
       <p className="text-base text-blue-400/80 mb-8">{translations.heroVersion}</p>
 
-      <p className="text-lg text-white/70 mb-12 max-w-3xl mx-auto text-center" dir={language === "ar" ? "rtl" : "ltr"}>
+      <p className="text-lg text-white/70 mb-12 max-w-3xl mx-auto text-center" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
         {translations.heroDescription}
       </p>
 
@@ -264,10 +265,10 @@ export function Hero() {
       )}
 
       <div className="mt-8 flex flex-col items-center gap-3">
-        <p className="text-lg text-white/80 font-medium text-center max-w-3xl" dir={language === "ar" ? "rtl" : "ltr"}>
+        <p className="text-lg text-white/80 font-medium text-center max-w-3xl" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
           {translations.heroCta}
         </p>
-        <p className="text-base text-white/70 text-center" dir={language === "ar" ? "rtl" : "ltr"}>
+        <p className="text-base text-white/70 text-center" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
           {translations.heroCtaSub}
         </p>
         <ArrowDown className="h-8 w-8 text-cyan-400 animate-bounce drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
