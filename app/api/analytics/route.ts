@@ -104,7 +104,7 @@ export async function GET() {
   }
 
   try {
-    // Active in last 24 h
+    // Active in last 24 h - from melegy_history interactions
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     const { data: recentRows, error: recentErr } = await supabase
       .from("melegy_history")
@@ -284,12 +284,17 @@ export async function GET() {
         conversations: Math.floor(Math.random() * 100) + 50
       }
     })
+    
+    // Demo active users - realistic simulation
+    const demoActiveUsersNow = Math.floor(Math.random() * 12) + 4  // 4-15 users active now
+    const demoActiveUsers24h = Math.floor(Math.random() * 30) + 12  // 12-41 users active in 24h
+    
     return Response.json({
       totalConversations: 247,
       totalMessages: 247,
       totalUsers: 52,
-      activeUsersNow: 8,
-      activeUsers: 12,
+      activeUsersNow: demoActiveUsersNow,
+      activeUsers: demoActiveUsers24h,
       pageviewsToday: vercel.pageviews || 340,
       visitorsToday: vercel.visitors || 89,
       messagesPerMinute: 2.4,
