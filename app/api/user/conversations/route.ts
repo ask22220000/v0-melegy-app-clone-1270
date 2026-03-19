@@ -61,7 +61,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      // Return a temp ID so the page doesn't crash
       return NextResponse.json({ conversation: { id: String(Date.now()) } })
     }
 
