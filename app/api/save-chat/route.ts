@@ -9,8 +9,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    // Accept user_id (auth UUID) or mlg_user_id (legacy) or id
-    const userId = searchParams.get("user_id") || searchParams.get("mlg_user_id") || searchParams.get("id")
+    const userId = searchParams.get("user_id")
 
     if (!userId) {
       return NextResponse.json({ histories: [] })
@@ -49,14 +48,13 @@ export async function POST(request: Request) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
     const body = await request.json()
-    const { chat_title, chat_date, messages, user_id, mlg_user_id } = body
+    const { chat_title, chat_date, messages, user_id } = body
 
-    // Accept either user_id (auth UUID) or mlg_user_id (legacy)
-    const resolvedUserId = user_id || mlg_user_id
-
-    if (!resolvedUserId) {
+    if (!user_id) {
       return NextResponse.json({ error: "Missing user_id" }, { status: 400 })
     }
+
+    const resolvedUserId = user_id
 
     const messagesValue = typeof messages === "string" ? JSON.parse(messages) : messages
     const now = new Date().toISOString()

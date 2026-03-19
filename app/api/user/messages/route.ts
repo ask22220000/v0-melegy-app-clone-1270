@@ -32,9 +32,10 @@ export async function GET(request: NextRequest) {
 // POST /api/user/messages — save a message (preserves imageUrl, videoUrl)
 export async function POST(request: NextRequest) {
   try {
-    const { conversation_id, mlg_user_id, role, content, imageUrl, videoUrl } = await request.json()
+    const { conversation_id, mlg_user_id, user_id, role, content, imageUrl, videoUrl } = await request.json()
+    const resolvedUserId = user_id || mlg_user_id
 
-    if (!conversation_id || !mlg_user_id || !role || !content) {
+    if (!conversation_id || !role || !content) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     const insertPayload: any = {
       conversation_id,
-      mlg_user_id,
+      ...(resolvedUserId ? { mlg_user_id: resolvedUserId } : {}),
       role,
       content,
       created_at: new Date().toISOString(),
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     // Increment messages_used for user (only count user messages)
     if (role === "user") {
-      await supabase.rpc("increment_messages_used", { user_id: mlg_user_id }).catch(() => {
+      await supabase.rpc("increment_messages_used", { user_id: resolvedUserId }).catch(() => {
         // fallback if rpc not available
       })
     }
