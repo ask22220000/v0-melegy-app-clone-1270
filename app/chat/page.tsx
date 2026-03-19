@@ -209,7 +209,7 @@ export default function ChatPage() {
     }
   }
 
-  // Initialize user: check Supabase Auth session
+  // Initialize user via Supabase Auth
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data, error }) => {
