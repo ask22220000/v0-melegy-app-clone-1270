@@ -202,7 +202,7 @@ const TABS = [
   { id: "activity",  label: "النشاط" },
 ]
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ── Main Page ──────────────────────────────────────────────────��──────────────
 export default function DataPage() {
   const [data, setData]       = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -214,7 +214,7 @@ export default function DataPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/analytics")
+      const res = await fetch("/api/stats")
       if (res.ok) {
         setData(await res.json())
         setLastRefresh(new Date())

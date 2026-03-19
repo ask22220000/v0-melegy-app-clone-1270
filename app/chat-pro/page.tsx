@@ -469,22 +469,21 @@ export default function ChatProPage() {
   // Helper function to track analytics
   const trackAnalytics = async (action: string, data?: any) => {
     try {
-      await fetch("/api/analytics", {
+      await fetch("/api/stats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, data }),
       })
-    } catch (error) {
-      // Silent fail - analytics are non-critical
+    } catch {
+      // Silent fail
     }
   }
 
   // Create conversation in database on first message
   const ensureConversationExists = async () => {
     if (conversationCreated) return
-    
     try {
-      await fetch("/api/analytics", {
+      await fetch("/api/stats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
