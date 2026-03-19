@@ -7,9 +7,11 @@
  */
 
 /**
- * Egyptian Arabic food terms dictionary for better translations
+ * Egyptian Arabic terms dictionary for accurate translations
+ * Basic translations without prescriptive constraints
  */
 const EGYPTIAN_FOOD_DICTIONARY: Record<string, string> = {
+ v0/arabportalweb-3873-2e563f2f
   // Common Egyptian foods
   "كنافة": "konafa (Egyptian pastry dessert with cheese and syrup)",
   "كنافه": "konafa (Egyptian pastry dessert with cheese and syrup)",
@@ -64,33 +66,40 @@ const EGYPTIAN_FOOD_DICTIONARY: Record<string, string> = {
   "بصل": "onion",
   "ثوم": "garlic",
   "حار": "spicy",
+
+  // Religious/Biblical figures and themes
+  "السيد المسيح": "Jesus Christ",
+  "المسيح": "Jesus Christ",
+  "الآلام": "passion, suffering",
+  "القيامة": "resurrection",
+  "العدرا": "Virgin Mary",
+  "العذراء": "Virgin Mary",
+  "مريم": "Mary",
+  "القديس": "saint",
+  "القديسة": "female saint",
+  "الأيقونة": "religious icon",
+  "فن قبطي": "Coptic art",
+  "الفن القبطي": "Coptic art",
+  
+  // Egyptian foods - basic translations
+  "بطارخ": "bottarga (fish roe)",
+  "السردين": "sardines",
+  "سردين": "sardines",
+  "فسيخ": "fesikh",
+  "مشنة": "meshna (woven basket)",
+  "عيش بلدي": "Egyptian baladi bread",
+  "عيش": "bread",
+  
+  // Common terms
+  "طبيعي": "natural",
+  "واقعي": "realistic",
+  "حقيقي": "realistic",
+ main
   "مصري": "Egyptian",
-  "شعبي": "street food, popular Egyptian",
   "تقليدي": "traditional",
-  "شهي": "delicious",
-  "لذيذ": "tasty",
-  // Objects and descriptive terms
-  "صندوق": "rustic wooden box, wooden crate",
-  "صندوق خشبي": "simple wooden box, rustic wooden crate",
-  "خشبي": "wooden, simple wood, rustic",
-  "رصوص": "neatly stacked, organized, neat rows",
-  "مرصوص": "neatly stacked, organized, arranged in neat rows",
-  "ذهبي": "golden, golden-colored, warm golden tone",
-  "يخطف": "eye-catching, stunning, striking, visually appealing",
-  "تحت إضاءة": "under warm lighting, golden hour light",
-  "إضاءة قوية": "strong natural lighting, golden hour lighting, professional studio lighting",
-  "شخص": "person, man, woman, hand visible",
-  "بيفتح": "opening, is opening, opens, hands opening",
-  "بيرفع": "lifting, is lifting, raises",
-  "بيشيل": "holding, is holding, picking up",
-  // Photography and style terms
-  "طبيعي": "natural, authentic, real-life",
-  "دعائي": "professional photography, commercial style, advertising photography",
-  "كاميرا": "shot with professional DSLR camera",
-  "تصوير": "professional food photography, macro photography",
-  "واقع": "real-life, authentic, documentary style",
-  "حقيقي": "realistic, authentic, genuine",
-  "مصري": "authentic Egyptian, Egyptian street food style",
+  "جميل": "beautiful",
+  "لذيذ": "delicious",
+  "ذهبي": "golden",
 }
 
 const NO_CHANGE_PATTERNS = [
@@ -130,7 +139,7 @@ async function callGroq(systemPrompt: string, userMessage: string): Promise<stri
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "llama-3.1-8b-instant",
+      model: "llama-3.3-70b-versatile",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: substitutedMessage },
@@ -167,7 +176,16 @@ export async function processPromptForImageGeneration(userPrompt: string): Promi
   
   // Detect if the prompt mentions hands or includes hand-related actions
   const mentionsHands = /hand|ايد|يد|ترش|رش|ممسك|امسك|امساك|قابض|اصابع|اصابع|وضع|يضع|يمسك|بيرش|برش/i.test(userPrompt)
+  
+  // Detect if user explicitly asks for realistic/photographic quality
+  const wantsPhotorealistic = /واقعي|حقيقي|متصور|كاميرا|صورة حقيقية|صورة واقعية|realistic|photorealistic|like a photograph|like a photo|real|realistic|photograph/i.test(userPrompt)
+  
+  // Detect if prompt mentions animals (dogs, cats, birds, etc.)
+  const mentionsAnimals = /كلب|قط|حيوان|جرو|كتكوت|طائر|حصان|بقرة|غنم|lion|tiger|dog|cat|puppy|kitten|bird|horse|cow|sheep|animal|pet|wolf|fox|deer|elephant|bear|monkey|rabbit|mouse|rat|fish|whale|dolphin|penguin|eagle|owl|parrot/i.test(userPrompt)
 
+  const system = `You are a professional prompt engineer for AI image generation (Flux model).
+
+ v0/arabportalweb-3873-2e563f2f
   const system = `You are a professional prompt engineer for AI image generation (Flux model). Your goal: create prompts for PROFESSIONAL AUTHENTIC EGYPTIAN FOOD PHOTOGRAPHY — realistic, professionally lit, captured as if by a professional food photographer using a real DSLR camera, set in genuine Egyptian street food or home kitchen environment.
 
 CRITICAL DEFINITIONS:
@@ -186,60 +204,106 @@ Your job:
 6. AUTHENTICITY CHECK: Image should look like it was ACTUALLY PHOTOGRAPHED in real Egyptian food setting by professional photographer, NOT like studio product photography or AI-generated artifact.
 7. Return ONLY the final English prompt, under 250 words. No explanations.`
 
+YOUR CORE JOB:
+1. Translate Arabic (Egyptian dialect) to English faithfully - translate EVERY detail, do NOT omit anything.
+2. Apply user's EXACT request word-for-word - generate ONLY what they asked for, NOTHING else.
+3. Do NOT add elements, objects, figures, decorations, or food NOT mentioned by user.
+4. Do NOT modify or interpret the request - engineer it exactly as stated.
+
+QUALITY & TECHNICAL STANDARDS (always maintain):
+- Hyper-realistic, 8K professional quality, photo-realistic rendering
+- Anatomically correct humans: exactly 5 fingers per hand, correct proportions, natural poses
+- Anatomically correct animals: correct number of limbs (4 legs for quadrupeds, 2 for birds), proper body structure, realistic paw pads, correct ear placement, natural tail position
+- Natural lighting appropriate to subject/scene
+- Sharp professional focus with appropriate depth of field
+- No CGI look, no stylization, no plastic appearance unless user specifically requests artistic style
+
+SPECIAL REQUESTS:
+- Split images/diptychs: create EXACTLY the structure user requested with specified content on each side
+- Religious or historical themes: depict respectfully with professional realism
+- Portraits, landscapes, abstracts: render with photorealistic quality matching user's description
+- Compositions: follow user's layout/arrangement exactly
+
+CRITICAL RULES:
+1. Translate ALL Arabic accurately - cultural terms, religious references, descriptive language
+2. Apply request word-for-word - user's exact content goes into the image, nothing else
+3. Return ONLY the final English prompt under 250 words. No explanations or extra text.`
+ main
+
   const userMsg = hasArabic
     ? `Translate and engineer a professional image prompt for: "${userPrompt}"`
     : `Engineer a professional image prompt for: "${userPrompt}"`
 
   try {
     const result = await callGroq(system, userMsg)
-    let enhancedResult = result 
-      ? `${result}, ${IMAGE_GEN_QUALITY_CONSTANTS}`
-      : `${userPrompt}, ${IMAGE_GEN_QUALITY_CONSTANTS}`
     
-    // If user says "no people" or "no hands", add explicit instruction to negative prompt
-    if (noPeople) {
-      enhancedResult = `${enhancedResult} STRICTLY: no people, no humans, no hands visible, no body parts, isolated subject only`
-    }
-    // Otherwise, if hands are mentioned and user didn't say "no people", add hand anatomy specification
-    else if (mentionsHands) {
-      enhancedResult = enhancedResult.replace(
-        IMAGE_GEN_QUALITY_CONSTANTS,
-        `${IMAGE_GEN_QUALITY_CONSTANTS}, ${HAND_ANATOMY_SPEC}`
-      )
-    }
+    // Use enhanced photography quality if user explicitly asked for realistic/photographic images
+    const qualityConstants = wantsPhotorealistic 
+      ? `${IMAGE_GEN_QUALITY_CONSTANTS}, ${PHOTOREALISTIC_ENHANCEMENT}`
+      : IMAGE_GEN_QUALITY_CONSTANTS
     
-    return enhancedResult
+    const enhancedResult = result 
+      ? `${result}, ${qualityConstants}`
+      : `${userPrompt}, ${qualityConstants}`
+    
+    // Return with enhanced animal anatomy handling if animals are mentioned
+    return mentionsAnimals 
+      ? `${enhancedResult} | AVOID: ${ANIMAL_ANATOMY_NEGATIVE}`
+      : enhancedResult
   } catch (error) {
     console.error("[prompt-enhancer] Groq generation error:", error)
-    let fallback = `${userPrompt}, ${IMAGE_GEN_QUALITY_CONSTANTS}`
-    if (noPeople) {
-      fallback = `${fallback} STRICTLY: no people, no humans, no hands visible, no body parts, isolated subject only`
-    } else if (mentionsHands) {
-      fallback = `${fallback}, ${HAND_ANATOMY_SPEC}`
-    }
-    return fallback
+    
+    const qualityConstants = wantsPhotorealistic 
+      ? `${IMAGE_GEN_QUALITY_CONSTANTS}, ${PHOTOREALISTIC_ENHANCEMENT}`
+      : IMAGE_GEN_QUALITY_CONSTANTS
+    
+    const fallback = `${userPrompt}, ${qualityConstants}`
+    return mentionsAnimals 
+      ? `${fallback} | AVOID: ${ANIMAL_ANATOMY_NEGATIVE}`
+      : fallback
   }
 }
 
 /**
  * Constant quality/anatomy suffixes appended to every image-editing prompt.
  * Kept in one place so all routes stay in sync.
+ * Note: Core quality standards only - apply user's modifications fully.
  */
 export const IMAGE_EDIT_QUALITY_CONSTANTS =
-  "PRESERVE 100% SUBJECT IDENTITY: keep identical face structure, exact facial features, same skin tone, same eye color, same nose shape, same lip shape, same hair color and texture — NO facial modifications whatsoever. PERFECT ANATOMY: anatomically correct human body, exactly 5 fingers per hand (thumb + 4 fingers), correct finger proportions and joints, natural hand poses, two arms, two legs, proper limb attachment, realistic body proportions. HIGH QUALITY: 8K resolution, sharp focus, professional photography, cinematic lighting, photorealistic details."
+  "HIGH QUALITY STANDARDS: 8K resolution, sharp professional focus, photorealistic details, natural lighting. ANATOMY: If hands present: exactly 5 fingers per hand, correct finger proportions, natural hand poses. Apply user's requested modifications fully while maintaining photorealistic quality."
 
 /**
- * Negative prompt to avoid common AI generation issues - HEAVY EMPHASIS ON HANDS AND NO PEOPLE
+ * Negative prompt to avoid common AI generation issues - FOCUS ON ANATOMY/QUALITY ONLY
  */
 export const NEGATIVE_PROMPT_CONSTANTS =
-  "bad anatomy, wrong anatomy, deformed hands, bad hands, mutated hands, poorly drawn hands, malformed hands, extra fingers, too many fingers, missing fingers, fewer fingers, fused fingers, six fingers, seven fingers, extra limbs, missing limbs, disconnected limbs, floating limbs, extra legs, missing legs, extra arms, missing arms, long neck, twisted fingers, backwards fingers, unnatural hand position, hand artifacts, hand glitch, broken hands, distorted hands, people, humans, persons, human hand, human body, human figure, hands visible, hands in frame, hand holding, person, man, woman, child, face, head, body parts, arm visible, fingers visible, extra bodies, poorly drawn face, mutation, blurry, bad proportions, gross proportions, cloned face, disfigured, deformed body, duplicate, morbid, mutilated, out of frame, dehydrated, bad quality, low quality, jpeg artifacts, watermark, text, signature, cropped"
+  "bad anatomy, wrong anatomy, deformed hands, bad hands, mutated hands, poorly drawn hands, malformed hands, extra fingers, too many fingers, missing fingers, fewer fingers, fused fingers, six fingers, seven fingers, eight fingers, extra limbs, missing limbs, disconnected limbs, floating limbs, extra legs, missing legs, extra arms, missing arms, long neck, twisted fingers, backwards fingers, unnatural hand position, hand artifacts, hand glitch, broken hands, distorted hands, poorly drawn face, mutation, blurry, bad proportions, gross proportions, cloned face, disfigured, deformed body, duplicate, morbid, mutilated, out of frame, dehydrated, bad quality, low quality, jpeg artifacts, watermark, text, signature, cropped, CGI, plastic appearance, artificial, overly stylized"
 
 /**
+ v0/arabportalweb-3873-2e563f2f
  * Quality constants for image generation - AUTHENTIC EGYPTIAN FOOD PHOTOGRAPHY
  * Combines professional photojournalism quality with real-life Egyptian street food authenticity
  */
 export const IMAGE_GEN_QUALITY_CONSTANTS =
   "masterpiece, best quality, professional food photography, shot with professional DSLR camera (canon or nikon), sharp focus on main subject with shallow depth of field (bokeh background), warm golden natural lighting, authentic Egyptian street food environment, real-life Egyptian setting with visible context (wooden tables, woven baskets, traditional ceramics, aish baladi bread), macro food photography with fine details visible, rich warm color palette (golden browns, amber tones), authentic rustic surfaces (aged wood, worn ceramic, weathered baskets), visible moisture and food details (oil shine, spice texture, fresh herbs), fresh natural ingredients look, no CGI, no artificial smoothing, documentary photojournalism style, candid real-life moment, professional photographer capturing authentic Egyptian food culture, cinematic warm color grading, golden hour lighting quality, fine art food photography, realistic textures showing actual food preparation environment, visible signs of authentic Egyptian home or street vendor setting"
+
+ * Additional negative prompt for animal anatomy - prevents extra/missing legs and body parts
+ */
+export const ANIMAL_ANATOMY_NEGATIVE =
+  "extra legs, missing legs, deformed legs, warped legs, twisted legs, backwards legs, extra limbs, missing limbs, extra paws, mutated paws, extra heads, missing tail, deformed tail, extra ears, misplaced ears, grotesque animal, malformed animal body, wrong number of legs, extra body parts, floating limbs"
+
+/**
+ * Quality constants for image generation - FOCUSED ON CORE QUALITY AND REALISM ONLY
+ */
+export const IMAGE_GEN_QUALITY_CONSTANTS =
+  "hyper-realistic, 8K quality, professional cinematography, sharp focus, natural lighting, authentic textures, photorealistic details, NO CGI appearance, NO plastic look, NO artificial styling, documentary-style realism, high-definition clarity, professional composition"
+
+/**
+ * Advanced photography quality for when user explicitly asks for photorealistic/realistic images
+ * Enhances with professional photography techniques similar to high-end digital cameras
+ */
+export const PHOTOREALISTIC_ENHANCEMENT =
+  "shot with professional DSLR camera (Canon EOS R5 equivalent), 50mm f/1.8 lens, natural light or golden hour, shallow depth of field with creamy background blur, macro details visible in foreground, texture details preserved in shadows and highlights, professional color grading, accurate white balance, dynamic range optimized, film-quality rendering, captured by professional photographer, zero AI artifacts, indistinguishable from real photograph"
+ main
 
 /**
  * For image EDITING via fal-ai/flux-2/turbo/edit.
@@ -254,23 +318,22 @@ export async function processPromptForImageEditing(userPrompt: string): Promise<
   const hasArabic = /[\u0600-\u06FF]/.test(userPrompt)
 
   const system = `You are a professional prompt engineer for AI image editing (Flux model).
-Your job:
-1. If the text is Arabic (including Egyptian dialect), translate it to English faithfully — do NOT omit any detail.
-2. Write a precise editing instruction that applies ONLY what the user explicitly asks to change. Nothing more.
-3. IDENTITY LOCK: The subject's face, facial features, skin tone, eye color, nose shape, lips, hair must remain 100% IDENTICAL — do NOT alter them in any way.
-4. CRITICAL: Do NOT add people, faces, persons, humans, or figures of any kind unless the user explicitly mentions adding a person.
-5. CRITICAL: Do NOT add animals, objects, or elements not mentioned by the user.
-6. Preserve the original subject identity, face, and all personal features unless the user explicitly asks to change them.
-7. STRICT ANATOMY RULES:
-   - Every human hand MUST have exactly 5 fingers (1 thumb + 4 fingers)
-   - Fingers must have correct proportions and natural joints
-   - No extra, missing, fused, or deformed fingers
-   - Two arms attached naturally to shoulders
-   - Two legs attached naturally to hips
-   - Correct body proportions throughout
-8. Do NOT add text overlays or watermarks.
-9. Start your response with: "Apply ONLY the following changes while preserving 100% of the subject's face, identity, and features. Maintain perfect hand anatomy with exactly 5 fingers per hand:" then describe exactly what the user asked for.
-10. Return ONLY the instruction in English, under 150 words. No explanations.`
+
+YOUR JOB:
+1. Translate Arabic (including Egyptian dialect) to English faithfully - translate EVERYTHING accurately.
+2. Write a PRECISE editing instruction that applies EXACTLY what the user asked for.
+3. Apply user's request fully: if they ask to modify colors, textures, composition, lighting, specific elements - ENGINEER that into the prompt.
+4. Maintain PHOTOREALISTIC quality and professional standards.
+5. Preserve what should be preserved ONLY if user doesn't ask to change it.
+
+ANATOMY & QUALITY STANDARDS:
+- If hands visible: exactly 5 fingers per hand, natural anatomy.
+- Maintain photorealistic appearance: sharp focus, natural lighting, authentic textures.
+- No CGI look, plastic appearance, or artificial styling.
+
+FINAL OUTPUT:
+Write ONLY an editing instruction describing EXACTLY what the user requested to be changed/modified/adjusted.
+Return ONLY the instruction in English, under 150 words. No explanations.`
 
   const userMsg = hasArabic
     ? `Translate and write an image editing instruction for: "${userPrompt}"`
@@ -279,11 +342,11 @@ Your job:
   try {
     const result = await callGroq(system, userMsg)
     return result
-      ? `${result} ${IMAGE_EDIT_QUALITY_CONSTANTS} AVOID: ${NEGATIVE_PROMPT_CONSTANTS}`
-      : `Preserve all facial features, skin tone, and original background. ${userPrompt} ${IMAGE_EDIT_QUALITY_CONSTANTS} AVOID: ${NEGATIVE_PROMPT_CONSTANTS}`
+      ? `${result} ${IMAGE_EDIT_QUALITY_CONSTANTS}`
+      : `${userPrompt} ${IMAGE_EDIT_QUALITY_CONSTANTS}`
   } catch (error) {
     console.error("[prompt-enhancer] Groq editing error:", error)
-    return `Preserve all facial features, skin tone, and original background. ${userPrompt} ${IMAGE_EDIT_QUALITY_CONSTANTS} AVOID: ${NEGATIVE_PROMPT_CONSTANTS}`
+    return `${userPrompt} ${IMAGE_EDIT_QUALITY_CONSTANTS}`
   }
 }
 

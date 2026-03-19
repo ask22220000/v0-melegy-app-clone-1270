@@ -4,7 +4,7 @@ import { ImageIcon } from "lucide-react"
 import { useApp } from "@/lib/contexts/AppContext"
 
 export function Features() {
-  const { translations, language } = useApp()
+  const { translations, language, mounted } = useApp()
 
   const features = [
     { icon: "🖼️", key: "imageAnalysis" as const },
@@ -17,6 +17,13 @@ export function Features() {
     { icon: "📊", key: "spreadsheets" as const },
     { icon: "🤔", key: "deepThinking" as const },
   ]
+
+  // Don't render content until mounted to prevent hydration mismatch with Arabic text
+  if (!mounted) {
+    return null
+  }
+
+  const dir = language === "ar" ? "rtl" : "ltr"
 
   return (
     <section className="container mx-auto px-6 pb-20" suppressHydrationWarning>
@@ -31,10 +38,17 @@ export function Features() {
               <div className="text-5xl mb-4">
                 {feature.icon === "🖼️" ? <ImageIcon className="h-12 w-12 text-blue-400" /> : feature.icon}
               </div>
+ v0/arabportalweb-3873-2e563f2f
               <h3 className="text-xl font-bold text-white mb-3" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
                 {featureText.title}
               </h3>
               <p className="text-white/60 leading-relaxed" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
+
+              <h3 className="text-xl font-bold text-white mb-3" dir={dir} suppressHydrationWarning>
+                {featureText.title}
+              </h3>
+              <p className="text-white/60 leading-relaxed" dir={dir} suppressHydrationWarning>
+ main
                 {featureText.description}
               </p>
             </div>

@@ -1,13 +1,11 @@
 "use client"
-
-import { Header } from "@/components/header"
-import { Hero } from "@/components/hero"
-import { Features } from "@/components/features"
-import { Footer } from "@/components/footer"
-import Link from "next/link"
-import { useApp } from "@/lib/contexts/AppContext"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import { HomeContent } from "@/components/home-content"
 
 export default function HomePage() {
+ v0/arabportalweb-3873-2e563f2f
   const { translations, language } = useApp()
 
   return (
@@ -26,4 +24,12 @@ export default function HomePage() {
       <Footer />
     </div>
   )
+
+  const router = useRouter()
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      if (data?.user) router.replace("/chat")
+    })
+  }, [router])
+ main
 }

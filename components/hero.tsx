@@ -7,7 +7,8 @@ import { useApp } from "@/lib/contexts/AppContext"
 import { useEffect, useState, useRef } from "react"
 
 export function Hero() {
-  const { translations, language } = useApp()
+  const { translations, language, mounted } = useApp()
+
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showIOSGuide, setShowIOSGuide] = useState(false)
   const [showAndroidGuide, setShowAndroidGuide] = useState(false)
@@ -63,6 +64,13 @@ export function Hero() {
   }
 
   const isMobile = isIOS || isAndroid
+
+  // Don't render content until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return null
+  }
+
+  const dir = language === "ar" ? "rtl" : "ltr"
 
   return (
     <section className="container mx-auto px-6 pt-32 pb-20 text-center" suppressHydrationWarning>
@@ -183,26 +191,34 @@ export function Hero() {
         </div>
       </div>
 
-      <h1 className="text-6xl md:text-7xl font-bold text-blue-400 mb-6">{translations.heroTitle}</h1>
+      <h1 className="text-6xl md:text-7xl font-bold text-blue-400 mb-6" suppressHydrationWarning>{translations.heroTitle}</h1>
 
       <p
         className="text-2xl md:text-3xl text-white mb-4 font-semibold text-center"
+ v0/arabportalweb-3873-2e563f2f
         dir={language === "ar" ? "rtl" : "ltr"}
+
+        dir={dir}
+ main
         suppressHydrationWarning
       >
         {translations.heroSubtitle}
       </p>
 
-      <p className="text-base text-blue-400/80 mb-8">{translations.heroVersion}</p>
+      <p className="text-base text-blue-400/80 mb-8" suppressHydrationWarning>{translations.heroVersion}</p>
 
+ v0/arabportalweb-3873-2e563f2f
       <p className="text-lg text-white/70 mb-12 max-w-3xl mx-auto text-center" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
+
+      <p className="text-lg text-white/70 mb-12 max-w-3xl mx-auto text-center" dir={dir} suppressHydrationWarning>
+ main
         {translations.heroDescription}
       </p>
 
       <div className="flex justify-center">
         <Link href="/chat">
-          <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg rounded-xl">
-            <MessageSquare className={language === "ar" ? "ml-2 h-5 w-5" : "mr-2 h-5 w-5"} />
+          <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg rounded-xl" suppressHydrationWarning>
+            <MessageSquare className={dir === "rtl" ? "ml-2 h-5 w-5" : "mr-2 h-5 w-5"} />
             {translations.startChat}
           </Button>
         </Link>
@@ -260,15 +276,22 @@ export function Hero() {
       {isInstalled && (
         <div className="mt-6 flex items-center justify-center gap-2 text-green-400 text-sm">
           <Smartphone className="w-4 h-4" />
-          <span>التطبيق مثبت على جهازك</span>
+          <span>التطبيق مثبت على جه����ك</span>
         </div>
       )}
 
       <div className="mt-8 flex flex-col items-center gap-3">
+ v0/arabportalweb-3873-2e563f2f
         <p className="text-lg text-white/80 font-medium text-center max-w-3xl" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
           {translations.heroCta}
         </p>
         <p className="text-base text-white/70 text-center" dir={language === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
+
+        <p className="text-lg text-white/80 font-medium text-center max-w-3xl" dir={dir} suppressHydrationWarning>
+          {translations.heroCta}
+        </p>
+        <p className="text-base text-white/70 text-center" dir={dir} suppressHydrationWarning>
+ main
           {translations.heroCtaSub}
         </p>
         <ArrowDown className="h-8 w-8 text-cyan-400 animate-bounce drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
