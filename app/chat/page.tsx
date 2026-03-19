@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useApp } from "@/lib/contexts/AppContext"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
@@ -211,35 +212,19 @@ export default function ChatPage() {
     }
   }
 
-  // Initialize user: check localStorage for existing ID
+  // Initialize user: check Supabase Auth session
   useEffect(() => {
-    const storedId = localStorage.getItem("mlg_user_id")
-    const storedPlan = localStorage.getItem("mlg_plan") || "free"
-    if (storedId) {
-      // Verify it still exists on server
-      fetch(`/api/user?id=${storedId}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.user) {
-            setMlgUserId(data.user.mlg_user_id)
-            setMlgPlan(data.user.plan)
-            loadConversationsFromServer(data.user.mlg_user_id)
-          } else {
-            // ID invalid, show modal
-            localStorage.removeItem("mlg_user_id")
-            localStorage.removeItem("mlg_plan")
-            setShowUserModal(true)
-          }
-        })
-        .catch(() => {
-          // On error keep stored values
-          setMlgUserId(storedId)
-          setMlgPlan(storedPlan)
-          loadConversationsFromServer(storedId)
-        })
-    } else {
-      setShowUserModal(true)
-    }
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (error || !data.user) {
+        // Not logged in, middleware will redirect to /auth/login
+        return
+      }
+      const user = data.user
+      setMlgUserId(user.id)
+      setMlgPlan("free") // Default to free, check subscriptions from DB
+      loadConversationsFromServer(user.id)
+    })
   }, [])
 
   useEffect(() => {
@@ -1088,6 +1073,20 @@ export default function ChatPage() {
             >
               <Languages className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">{translations.languageToggle}</span>
+            </button>
+            <button
+              onClick={async () => {
+                const supabase = createClient()
+                await supabase.auth.signOut()
+                router.push("/auth/login")
+              }}
+              className="bg-card border-2 border-border text-foreground px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-lg transition-all duration-300 hover:bg-red-900/40 hover:border-red-700 hover:scale-105 flex items-center cursor-pointer"
+              aria-label="تسجيل الخروج"
+              title="تسجيل الخروج"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 sm:h-4 sm:w-4">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
             </button>
             <button
               onClick={() => setShowUsageCard(!showUsageCard)}

@@ -1,22 +1,63 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
-export default function proxy(request: NextRequest) {
-  const response = NextResponse.next()
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({ request })
 
-  // Security Headers
+  // ── Supabase session refresh ──────────────────────────────────────────────
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Protected routes — redirect to login if not authenticated
+  const protectedPaths = ['/chat', '/chat-pro', '/chat-starter', '/chat-advanced', '/voice-chat', '/data']
+  const isProtected = protectedPaths.some((p) => request.nextUrl.pathname.startsWith(p))
+  if (isProtected && !user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/login'
+    url.searchParams.set('redirectedFrom', request.nextUrl.pathname)
+    return NextResponse.redirect(url)
+  }
+
+  // If logged in and trying to access auth pages, redirect to chat
+  const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
+  if (isAuthPage && user) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/chat'
+    return NextResponse.redirect(url)
+  }
+
+  // ── Security Headers ──────────────────────────────────────────────────────
   response.headers.set('X-Frame-Options', 'SAMEORIGIN')
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   response.headers.set('X-XSS-Protection', '1; mode=block')
-  
-  // Permissions Policy
+
   response.headers.set(
     'Permissions-Policy',
     'camera=(), microphone=(self), geolocation=(), interest-cohort=()'
   )
 
-  // Content Security Policy
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://vercel.live https://*.vercel.live https://checkouts.kashier.io https://www.paypal.com https://www.paypalobjects.com",
@@ -24,8 +65,6 @@ export default function proxy(request: NextRequest) {
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https: http:",
     "media-src 'self' data: blob: https:",
-    // Only allow browser connections to our own API routes and required 3rd-party SDKs.
-    // All secret API calls (Groq, FAL, ElevenLabs, Perplexity) are server-side only.
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://va.vercel-scripts.com https://vercel.live wss:",
     "frame-src 'self' https://www.paypal.com https://checkouts.kashier.io https://vercel.live https://*.vercel.live",
     "worker-src 'self' blob:",
@@ -42,13 +81,6 @@ export default function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|images|icons|manifest.json|register-sw.js|sw.js).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|images/|icons/|manifest.json|register-sw.js|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

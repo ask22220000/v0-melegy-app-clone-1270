@@ -167,6 +167,7 @@ export async function GET() {
   let totalSubscribers    = 0
   let activeSubscriptions: {
     user_ip: string
+    user_email: string
     plan_name: string
     status: string
     started_at: string
@@ -176,12 +177,34 @@ export async function GET() {
   try {
     const { data: subRows } = await supabase
       .from("subscriptions")
-      .select("user_ip, plan_name, status, started_at, expires_at")
+      .select(`
+        user_ip,
+        auth_user_id,
+        plan_name,
+        status,
+        started_at,
+        expires_at
+      `)
       .order("created_at", { ascending: false })
 
     const rows = subRows ?? []
+
+    // Get emails for auth_user_ids
+    const authIds = rows.map((r: any) => r.auth_user_id).filter(Boolean)
+    const emailMap: Record<string, string> = {}
+    if (authIds.length > 0) {
+      const { data: authUsers } = await supabase
+        .from("users")
+        .select("id, email")
+        .in("id", authIds)
+      for (const u of authUsers ?? []) {
+        emailMap[u.id] = u.email ?? ""
+      }
+    }
+
     activeSubscriptions = rows.map((r: any) => ({
       user_ip:    r.user_ip ?? "",
+      user_email: r.auth_user_id ? emailMap[r.auth_user_id] ?? "" : "",
       plan_name:  r.plan_name ?? "free",
       status:     r.status ?? "unknown",
       started_at: r.started_at ?? "",
@@ -195,8 +218,9 @@ export async function GET() {
     for (const r of rows) {
       if (r.status !== "active") continue
       const p = (r.plan_name ?? "free").toLowerCase() as string
-      if (planMap[p]) planMap[p].add(r.user_ip ?? "")
-      else planMap["free"].add(r.user_ip ?? "")
+      const userId = r.auth_user_id ?? r.user_ip ?? "unknown"
+      if (planMap[p]) planMap[p].add(userId)
+      else planMap["free"].add(userId)
     }
 
     // Also count from user_usage plan field if subscriptions table is sparse

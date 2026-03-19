@@ -26,6 +26,7 @@ interface UserRecord {
 
 interface SubscriptionRecord {
   user_ip: string
+  user_email: string
   plan_name: string
   status: string
   started_at: string
@@ -542,7 +543,8 @@ export default function DataPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b" style={{ borderColor: COLORS.border }}>
-                        <th className="text-right text-slate-500 font-medium pb-3">User IP</th>
+                        <th className="text-right text-slate-500 font-medium pb-3">#</th>
+                        <th className="text-right text-slate-500 font-medium pb-3">الإيميل / User ID</th>
                         <th className="text-right text-slate-500 font-medium pb-3">الخطة</th>
                         <th className="text-right text-slate-500 font-medium pb-3">الحالة</th>
                         <th className="text-right text-slate-500 font-medium pb-3">بداية</th>
@@ -556,10 +558,15 @@ export default function DataPage() {
                           className="border-b hover:bg-white/5 transition-colors"
                           style={{ borderColor: COLORS.border }}
                         >
+                          <td className="py-3 text-slate-600 pr-2">{i + 1}</td>
                           <td className="py-3">
-                            <span className="font-mono text-slate-300 text-xs bg-slate-800 px-2 py-1 rounded-lg">
-                              {maskIp(s.user_ip || "—")}
-                            </span>
+                            {s.user_email ? (
+                              <span className="text-blue-300 text-xs font-medium">{s.user_email}</span>
+                            ) : (
+                              <span className="font-mono text-slate-400 text-xs bg-slate-800 px-2 py-1 rounded-lg">
+                                {maskIp(s.user_ip || "—")}
+                              </span>
+                            )}
                           </td>
                           <td className="py-3"><PlanBadge plan={s.plan_name} /></td>
                           <td className="py-3"><StatusBadge status={s.status} /></td>
@@ -625,7 +632,7 @@ export default function DataPage() {
           </div>
         )}
 
-        {/* ── Tab: Plans ────────────────────────────────────────────────────── */}
+        {/* ── Tab: Plans ──────────────────────��─────────────────────────────── */}
         {tab === "plans" && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
