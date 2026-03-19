@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server"
-
-export function proxy(request: NextRequest) {
-  return NextResponse.next()
+export default function proxy(request: Request) {
+  return new Response(null, {
+    status: 200,
+    headers: { "x-proxy": "1" },
+  })
 }
 
 export const config = {

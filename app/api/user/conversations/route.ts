@@ -5,7 +5,7 @@ import { getServiceRoleClient } from "@/lib/supabase/server"
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("user_id")
+    const userId = searchParams.get("user_id") || searchParams.get("mlg_user_id")
 
     if (!userId) {
       return NextResponse.json({ conversations: [] })
