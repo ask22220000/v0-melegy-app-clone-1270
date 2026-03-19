@@ -1,71 +1,44 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServiceRoleClient } from "@/lib/supabase/server"
 
-// GET /api/user/conversations?user_id=mlg_xxx — fetch all conversations for a user
+// GET /api/user/conversations?user_id=<auth_uuid>
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const mlgUserId = searchParams.get("user_id")
+    const userId = searchParams.get("user_id")
 
-    if (!mlgUserId) {
-      return NextResponse.json({ error: "Missing user_id" }, { status: 400 })
+    if (!userId) {
+      return NextResponse.json({ conversations: [] })
     }
 
     const supabase = getServiceRoleClient()
 
+    // melegy_history is the actual chat storage table
     const { data, error } = await supabase
-      .from("conversations")
-      .select("id, title, created_at, updated_at")
-      .eq("mlg_user_id", mlgUserId)
+      .from("melegy_history")
+      .select("id, chat_title, chat_date, created_at, updated_at")
+      .eq("auth_user_id", userId)
       .order("updated_at", { ascending: false })
+      .limit(50)
 
     if (error) {
-      // Schema cache miss — column likely missing, return empty gracefully
-      if (error.message?.includes("mlg_user_id") || error.code === "PGRST204") {
-        console.error("[v0] conversations schema error:", error.message)
-        return NextResponse.json({ conversations: [] })
-      }
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error("[user/conversations GET] error:", error.message)
+      return NextResponse.json({ conversations: [] })
     }
 
-    return NextResponse.json({ conversations: data || [] })
+    const conversations = (data || []).map((row: any) => ({
+      id: row.id,
+      title: row.chat_title ?? "محادثة",
+      created_at: row.updated_at ?? row.created_at,
+    }))
+
+    return NextResponse.json({ conversations })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
-// POST /api/user/conversations — create new conversation
+// POST /api/user/conversations — not needed anymore (save-chat handles this)
 export async function POST(request: NextRequest) {
-  try {
-    const { mlg_user_id, title } = await request.json()
-
-    if (!mlg_user_id) {
-      return NextResponse.json({ error: "Missing mlg_user_id" }, { status: 400 })
-    }
-
-    const supabase = getServiceRoleClient()
-
-    const { data, error } = await supabase
-      .from("conversations")
-      .insert({
-        mlg_user_id,
-        title: title || "محادثة جديدة",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select("id, title, created_at")
-      .single()
-
-    if (error) {
-      // Schema cache miss — column likely missing, return empty gracefully
-      if (error.message?.includes("mlg_user_id") || error.code === "PGRST204") {
-        console.error("[v0] conversations POST schema error:", error.message)
-        return NextResponse.json({ conversation: { id: null, title: title || "محادثة جديدة", created_at: new Date().toISOString() } })
-      }
-    }
-
-    return NextResponse.json({ conversation: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
-  }
+  return NextResponse.json({ conversation: { id: null } })
 }

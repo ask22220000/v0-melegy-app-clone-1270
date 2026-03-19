@@ -195,15 +195,14 @@ export default function ChatPage() {
   // Load conversations from Supabase when user ID is set
   const loadConversationsFromServer = async (userId: string) => {
     try {
-      const res = await fetch(`/api/user/conversations?user_id=${userId}`)
+      const res = await fetch(`/api/save-chat?user_id=${userId}`)
       const data = await res.json()
-      if (data.conversations && data.conversations.length > 0) {
-        const histories: ChatHistory[] = data.conversations.map((c: any) => ({
-          id: c.id,
-          title: c.title,
-          date: new Date(c.created_at).toLocaleDateString("ar-EG"),
-          messages: [], // lazy-load messages when user clicks
-          conversationId: c.id,
+      if (data.histories && data.histories.length > 0) {
+        const histories: ChatHistory[] = data.histories.map((h: any) => ({
+          id: h.id,
+          title: h.title,
+          date: h.date,
+          messages: h.messages ?? [],
         }))
         setChatHistories(histories)
       }
@@ -865,39 +864,26 @@ export default function ChatPage() {
         .join(" | ") || "محادثة بدون عنوان"
 
     try {
-      // 1. Create conversation in Supabase
-      const convRes = await fetch("/api/user/conversations", {
+      const chatDate = new Date().toLocaleDateString("ar-EG")
+
+      const res = await fetch("/api/save-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mlg_user_id: mlgUserId, title: title.substring(0, 80) }),
+        body: JSON.stringify({
+          user_id: mlgUserId,
+          chat_title: title.substring(0, 80),
+          chat_date: chatDate,
+          messages: messages.filter((m) => m.id !== "welcome"),
+        }),
       })
-      const convData = await convRes.json()
-      if (!convRes.ok) throw new Error(convData.error || "فشل إنشاء المحادثة")
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "فشل الحفظ")
 
-      const conversationId = convData.conversation.id
-
-      // 2. Save all messages — pass imageUrl/videoUrl as dedicated fields
-      for (const msg of messages) {
-        if (msg.id === "welcome") continue
-        await fetch("/api/user/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversation_id: conversationId,
-            mlg_user_id: mlgUserId,
-            role: msg.role,
-            content: msg.content || "",
-            imageUrl: msg.imageUrl || null,
-            videoUrl: msg.videoUrl || null,
-          }),
-        })
-      }
-
-      // 3. Update local state
+      // Update local state
       const newChat: ChatHistory = {
-        id: conversationId,
+        id: data.id ?? String(Date.now()),
         title: title.substring(0, 50),
-        date: new Date().toLocaleDateString("ar-EG"),
+        date: chatDate,
         messages: messages,
       }
       setChatHistories((prev) => [newChat, ...prev])
