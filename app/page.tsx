@@ -1,13 +1,18 @@
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { HomeContent } from "@/components/home-content"
 
-// v3 - no dynamic import, no ssr:false
-export const dynamic = "force-dynamic"
+export default function HomePage() {
+  const router = useRouter()
 
-export default async function HomePage() {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
-  if (data?.user) redirect("/chat")
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user) router.replace("/chat")
+    })
+  }, [router])
+
   return <HomeContent />
 }
