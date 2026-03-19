@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-export async function proxy(request: NextRequest) {
+async function proxyHandler(request: NextRequest) {
   let response = NextResponse.next({ request })
 
   // ── Supabase session refresh ──────────────────────────────────────────────
@@ -78,6 +78,9 @@ export async function proxy(request: NextRequest) {
 
   return response
 }
+
+export { proxyHandler as proxy }
+export default proxyHandler
 
 export const config = {
   matcher: [
