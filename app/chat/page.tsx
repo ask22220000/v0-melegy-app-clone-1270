@@ -1004,7 +1004,6 @@ export default function ChatPage() {
     }
   }
 
-  const handleUserReady = (userId: string, plan: string, isNew: boolean) => {
   return (
     <div className="min-h-screen bg-background flex flex-col" dir={language === "ar" ? "rtl" : "ltr"} style={{ backgroundColor: 'hsl(var(--background))' }}>
       <Toaster />
