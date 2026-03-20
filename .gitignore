@@ -26,3 +26,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env
+
+# Next.js 16 uses proxy.ts instead of middleware.ts
+middleware.ts
