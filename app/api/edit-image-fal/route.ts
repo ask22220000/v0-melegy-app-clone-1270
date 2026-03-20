@@ -4,7 +4,6 @@ import { processPromptForImageEditing, NEGATIVE_PROMPT_CONSTANTS } from "@/lib/p
 
 // Increase body size limit for base64 images (50MB)
 export const maxDuration = 60 // Maximum allowed by Vercel
-export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
   try {
