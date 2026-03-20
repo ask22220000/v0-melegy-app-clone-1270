@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     } catch (falError: any) {
       console.error("[edit] FAL API error:", falError)
 
-      if (falError.status === 403 && falError.body?.detail?.includes("Exhausted balance")) {
+      if (falError.status === 403) {
         throw new Error("رصيد FAL انتهى. يرجى شحن الرصيد من fal.ai/dashboard/billing")
       }
       if (falError.status === 413 || falError.message?.includes("payload too large")) {
