@@ -51,23 +51,20 @@ export async function POST(request: NextRequest) {
     // Required: prompt + image_urls (array)
     let result: any
     try {
-      result = await fal.subscribe("fal-ai/flux-general/image-to-image", {
+      result = await fal.subscribe("fal-ai/flux-pro/kontext", {
         input: {
           prompt: enhancedPrompt,
           image_url: finalImageUrls[0],
-          strength: 0.85,
-          num_inference_steps: 28,
-          guidance_scale: 3.5,
           num_images: 1,
-          enable_safety_checker: false,
           output_format: "jpeg",
+          safety_tolerance: "6",
         },
       })
     } catch (falError: any) {
       console.error("[edit] FAL API error:", falError)
 
       if (falError.status === 403) {
-        throw new Error("رصيد FAL انتهى. يرجى شحن الرصيد من fal.ai/dashboard/billing")
+        throw new Error("خطأ في صلاحيات FAL. تأكد من صحة FAL_KEY في إعدادات المشروع")
       }
       if (falError.status === 413 || falError.message?.includes("payload too large")) {
         throw new Error("الصورة كبيرة جداً. يرجى استخدام صورة أصغر (أقل من 5 ميجا)")
