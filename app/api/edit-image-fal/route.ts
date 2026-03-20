@@ -46,20 +46,14 @@ export async function POST(request: NextRequest) {
     // Step 2: Use Gemini 3 Flash as Prompt Engineer — translate + preserve subject features
     const enhancedPrompt = await processPromptForImageEditing(prompt)
 
-    // Step 3: Edit image via fal-ai/flux-pro/v1.1/redux for better quality
-    // Required: prompt + image_urls (array)
+    // Step 3: Edit image via fal-ai/nano-banana/edit for fast, efficient editing
+    // Required: prompt + image_url
     let result: any
     try {
-      result = await fal.subscribe("fal-ai/flux-general/image-to-image", {
+      result = await fal.subscribe("fal-ai/nano-banana/edit", {
         input: {
           prompt: enhancedPrompt,
           image_url: finalImageUrls[0],
-          strength: 0.85,
-          num_inference_steps: 28,
-          guidance_scale: 3.5,
-          num_images: 1,
-          enable_safety_checker: false,
-          output_format: "jpeg",
         },
       })
     } catch (falError: any) {
