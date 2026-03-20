@@ -54,15 +54,26 @@ async function callGroq(systemPrompt: string, userMessage: string): Promise<stri
 export async function processPromptForImageGeneration(userPrompt: string): Promise<string> {
   const hasArabic = /[\u0600-\u06FF]/.test(userPrompt)
 
+  // Detect orientation from raw prompt to pass as hint to Groq
+  const lower = userPrompt.toLowerCase()
+  const isLandscape = /عرضي|عرضية|أفقي|أفقية|سينمائي|سينمائية|بانوراما|landscape|cinematic|wide|panoramic|horizontal|widescreen|16:9/i.test(lower)
+  const isSquare    = /مربع|مربعة|1:1|square/i.test(lower)
+  const orientationHint = isLandscape
+    ? "The image must be LANDSCAPE (wide/cinematic 16:9 format)."
+    : isSquare
+    ? "The image must be SQUARE (1:1 format)."
+    : "The image is PORTRAIT (4:5 format)."
+
   const system = `You are a professional prompt engineer for AI image generation (Flux model).
 Your job:
 1. If the text is Arabic (including Egyptian dialect), translate it to English faithfully and completely — do NOT omit any detail.
 2. Enrich the translation with professional visual details: lighting, composition, color palette, mood, camera angle, photographic style.
-3. Do NOT change or remove any subject, person, object, or scene the user described.
-4. CRITICAL: Do NOT add people, faces, persons, humans, or figures of any kind unless the user explicitly asks for a person in their prompt.
-5. CRITICAL: Do NOT add animals, objects, or elements the user did not mention.
-6. Do NOT add text overlays, watermarks, or typography.
-7. Return ONLY the final English prompt, under 120 words. No explanations.`
+3. ${orientationHint} Include this orientation in the composition description.
+4. Do NOT change or remove any subject, person, object, or scene the user described.
+5. CRITICAL: Do NOT add people, faces, persons, humans, or figures of any kind unless the user explicitly asks for a person in their prompt.
+6. CRITICAL: Do NOT add animals, objects, or elements the user did not mention.
+7. Do NOT add text overlays, watermarks, or typography.
+8. Return ONLY the final English prompt, under 120 words. No explanations.`
 
   const userMsg = hasArabic
     ? `Translate and engineer a professional image prompt for: "${userPrompt}"`
@@ -73,7 +84,6 @@ Your job:
     return result || userPrompt
   } catch (error) {
     console.error("[prompt-enhancer] Groq generation error:", error)
-    // Fallback: send as-is — flux handles some Arabic
     return userPrompt
   }
 }
