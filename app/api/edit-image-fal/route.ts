@@ -2,8 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import * as fal from "@fal-ai/serverless-client"
 import { processPromptForImageEditing } from "@/lib/prompt-enhancer"
 
+v0/ask22220000-1c05a125
 export const maxDuration = 60
 export const runtime = "nodejs"
+
+// Increase body size limit for base64 images (50MB)
+export const maxDuration = 60 // Maximum allowed by Vercel
+main
 
 // Configure fal client once at module level
 fal.config({
@@ -45,10 +50,11 @@ export async function POST(request: NextRequest) {
     // Step 2: Use Gemini 3 Flash as Prompt Engineer — translate + preserve subject features
     const enhancedPrompt = await processPromptForImageEditing(prompt)
 
-    // Step 3: Edit image via fal-ai/flux-pro/v1.1/redux for better quality
-    // Required: prompt + image_urls (array)
+    // Step 3: Edit image via fal-ai/nano-banana/edit for fast, efficient editing
+    // Using Nano Banana with optimized settings
     let result: any
     try {
+v0/ask22220000-1c05a125
       result = await fal.subscribe("fal-ai/flux-lora/image-to-image", {
         input: {
           prompt: enhancedPrompt,
@@ -58,6 +64,16 @@ export async function POST(request: NextRequest) {
           guidance_scale: 3.5,
           strength: 0.85,
           enable_safety_checker: false,
+
+      result = await fal.subscribe("fal-ai/nano-banana/edit", {
+        input: {
+          prompt: enhancedPrompt,
+          image_urls: finalImageUrls,
+          num_images: 1,
+          output_format: "jpeg",
+          safety_tolerance: "4",
+          aspect_ratio: "auto",
+main
         },
       })
     } catch (falError: any) {
