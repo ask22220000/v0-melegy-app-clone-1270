@@ -2,6 +2,21 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export default function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Auth guard: protect chat and data routes
+  const protectedRoutes = ["/chat", "/chat-starter", "/chat-pro", "/chat-advanced", "/data"]
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
+  const authToken = request.cookies.get("authToken")?.value
+
+  if (!authToken && isProtectedRoute) {
+    return NextResponse.redirect(new URL("/login", request.url))
+  }
+
+  if (authToken && (pathname === "/login" || pathname === "/register")) {
+    return NextResponse.redirect(new URL("/chat", request.url))
+  }
+
   const response = NextResponse.next()
 
   // Security Headers
