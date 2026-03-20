@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export default function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const response = NextResponse.next()
 
   response.headers.set('X-Frame-Options', 'SAMEORIGIN')
@@ -30,6 +30,8 @@ export default function proxy(request: NextRequest) {
 
   return response
 }
+
+export default proxy
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|images|icons|manifest.json|register-sw.js|sw.js).*)'],
