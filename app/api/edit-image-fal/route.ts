@@ -47,13 +47,17 @@ export async function POST(request: NextRequest) {
     const enhancedPrompt = await processPromptForImageEditing(prompt)
 
     // Step 3: Edit image via fal-ai/nano-banana/edit for fast, efficient editing
-    // Required: prompt + image_url
+    // Using Nano Banana with optimized settings
     let result: any
     try {
       result = await fal.subscribe("fal-ai/nano-banana/edit", {
         input: {
           prompt: enhancedPrompt,
-          image_url: finalImageUrls[0],
+          image_urls: finalImageUrls,
+          num_images: 1,
+          output_format: "jpeg",
+          safety_tolerance: "4",
+          aspect_ratio: "auto",
         },
       })
     } catch (falError: any) {
