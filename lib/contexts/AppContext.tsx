@@ -11,7 +11,11 @@ type AppContextType = {
   theme: Theme
   setTheme: (theme: Theme) => void
   translations: typeof translations.ar
+ v0/arabportalweb-3873-2e563f2f
+  isHydrated: boolean
+
   mounted: boolean
+ main
 }
 
 const translations = {
@@ -174,7 +178,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>("ar")
   const [theme, setThemeState] = useState<Theme>("dark")
+ v0/arabportalweb-3873-2e563f2f
+  const [isHydrated, setIsHydrated] = useState(false)
+
   const [mounted, setMounted] = useState(false)
+ main
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -188,7 +196,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {
       // silently ignore localStorage errors
     }
+ v0/arabportalweb-3873-2e563f2f
+
+    setIsHydrated(true)
+
     setMounted(true)
+ main
   }, [])
 
   useEffect(() => {
@@ -230,8 +243,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLanguage,
         theme,
         setTheme,
+ v0/arabportalweb-3873-2e563f2f
+        translations: translations[language],
+        isHydrated,
+
         translations: currentTranslations,
         mounted,
+ main
       }}
     >
       {children}
