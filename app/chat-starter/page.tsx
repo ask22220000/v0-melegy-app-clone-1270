@@ -188,10 +188,8 @@ export default function ChatStarterPage() {
   // Initialize user from localStorage
   useEffect(() => {
     const storedId = localStorage.getItem("mlg_user_id")
-    if (storedId) {
-      setMlgUserId(storedId)
-    } else {
-      setShowUserModal(true)
+    if (!storedId) {
+      window.location.href = '/login'
     }
   }, [])
 
