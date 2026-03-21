@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Copy, Check, UserPlus, LogIn, Loader2 } from "lucide-react"
 
 interface UserIdModalProps {
-  onUserReady: (userId: string, plan: string, isNew: boolean) => void
+  onUserReady: (userId: string, plan: string, isNew: boolean, conversations: any[]) => void
 }
 
 type View = "choice" | "new-id" | "enter-id"
@@ -61,7 +61,8 @@ export function UserIdModal({ onUserReady }: UserIdModalProps) {
       // Save to localStorage
       localStorage.setItem("mlg_user_id", data.user.mlg_user_id)
       localStorage.setItem("mlg_plan", data.user.plan)
-      onUserReady(data.user.mlg_user_id, data.user.plan, false)
+      // Pass conversations array to chat component
+      onUserReady(data.user.mlg_user_id, data.user.plan, false, data.user.conversations || [])
     } catch {
       setError("حدث خطأ في الاتصال بالسيرفر")
     } finally {
@@ -73,10 +74,10 @@ export function UserIdModal({ onUserReady }: UserIdModalProps) {
     navigator.clipboard.writeText(newId).then(() => {
       setCopied(true)
       setTimeout(() => {
-        // Save to localStorage then proceed
+        // Save to localStorage then proceed with empty conversations (new user)
         localStorage.setItem("mlg_user_id", newId)
         localStorage.setItem("mlg_plan", plan)
-        onUserReady(newId, plan, true)
+        onUserReady(newId, plan, true, [])
       }, 800)
     })
   }

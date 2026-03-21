@@ -47,16 +47,16 @@ export async function POST(request: NextRequest) {
     // Step 2: Use Gemini 3 Flash as Prompt Engineer — translate + preserve subject features
     const enhancedPrompt = await processPromptForImageEditing(prompt)
 
-    // Step 3: Edit image via fal-ai/flux-2/turbo/edit
-    // Required: prompt + image_urls (array). No strength/num_inference_steps in this model.
+    // Step 3: Edit image via fal-ai/nano-banana/image/edit (much better for food/fish images)
     let result: any
     try {
-      result = await fal.subscribe("fal-ai/flux-2/turbo/edit", {
+      result = await fal.subscribe("fal-ai/nano-banana/image/edit", {
         input: {
           prompt: enhancedPrompt,
-          image_urls: finalImageUrls, // must be an array — image_url (singular) is not supported
-          image_size: "portrait_4_3",
-          guidance_scale: 4.0,
+          image_url: finalImageUrls[0], // nano-banana takes single image_url (not array)
+          guidance_scale: 7.5,
+          strength: 0.85,
+          num_inference_steps: 30,
           num_images: 1,
           enable_safety_checker: false,
           output_format: "jpeg",

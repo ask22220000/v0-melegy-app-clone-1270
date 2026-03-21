@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-// Create a fresh Supabase client per request — no singleton, no cache issues
-// Uses service role key if available, falls back to anon key
 function getClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
     db: { schema: "public" },
@@ -23,8 +19,8 @@ function generateMlgId(): string {
   return id
 }
 
-// POST /api/user — create new anonymous user with random ID
-export async function POST() {
+// POST /api/user — create new anonymous user
+export async function POST(request: NextRequest) {
   try {
     const db = getClient()
     let mlgUserId = generateMlgId()
@@ -40,20 +36,28 @@ export async function POST() {
       mlgUserId = generateMlgId()
     }
 
+    const now = new Date().toISOString()
     const { data: user, error } = await db
       .from("melegy_users")
       .insert({
         mlg_user_id: mlgUserId,
         plan: "free",
         messages_used: 0,
-        created_at: new Date().toISOString(),
-        last_seen_at: new Date().toISOString(),
+        messages_daily_reset_at: now,
+        voice_minutes_used: 0,
+        voice_minutes_daily_reset_at: now,
+        image_edits_used: 0,
+        image_edits_daily_reset_at: now,
+        created_at: now,
+        last_seen_at: now,
+        user_agent: request.headers.get("user-agent") || "",
+        ip_address: request.headers.get("x-forwarded-for") || "",
       })
       .select("mlg_user_id, plan, messages_used, created_at")
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: 500 })
+      return NextResponse.json({ error: error.message, code: error.code }, { status: 500 })
     }
 
     return NextResponse.json({ user })
@@ -71,9 +75,10 @@ export async function GET(request: NextRequest) {
 
     const db = getClient()
 
+    // Get user with plan info
     const { data: user, error } = await db
       .from("melegy_users")
-      .select("mlg_user_id, plan, messages_used, created_at, last_seen_at")
+      .select("mlg_user_id, plan, plan_expires_at, messages_used, messages_daily_reset_at, voice_minutes_used, image_edits_used, created_at")
       .eq("mlg_user_id", mlgUserId)
       .maybeSingle()
 
@@ -81,23 +86,45 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
     // Get plan limits
-    const { data: limits } = await db
+    const { data: planLimit } = await db
       .from("plan_limits")
-      .select("daily_messages, label")
+      .select("label, daily_messages, daily_image_edits, daily_voice_minutes")
       .eq("plan", user.plan)
       .maybeSingle()
 
-    // Update last_seen_at (fire and forget)
+    // Check if plan expired
+    let currentPlan = user.plan
+    if (user.plan_expires_at && new Date(user.plan_expires_at) < new Date()) {
+      currentPlan = "free"
+      await db.from("melegy_users").update({ plan: "free" }).eq("mlg_user_id", mlgUserId)
+    }
+
+    // Update last_seen_at
     db.from("melegy_users")
       .update({ last_seen_at: new Date().toISOString() })
       .eq("mlg_user_id", mlgUserId)
       .then(() => {})
 
+    // Get user's conversations
+    const { data: conversations } = await db
+      .from("melegy_conversations")
+      .select("id, title, created_at, updated_at")
+      .eq("mlg_user_id", mlgUserId)
+      .order("updated_at", { ascending: false })
+
     return NextResponse.json({
       user: {
-        ...user,
-        plan_label: limits?.label || user.plan,
-        daily_limit: limits?.daily_messages ?? 10,
+        mlg_user_id: user.mlg_user_id,
+        plan: currentPlan,
+        plan_expires_at: user.plan_expires_at,
+        plan_label: planLimit?.label || currentPlan,
+        messages_used: user.messages_used,
+        daily_limit: planLimit?.daily_messages ?? 10,
+        voice_minutes_used: user.voice_minutes_used,
+        daily_voice_limit: planLimit?.daily_voice_minutes ?? 30,
+        image_edits_used: user.image_edits_used,
+        daily_image_edits_limit: planLimit?.daily_image_edits ?? 3,
+        conversations: conversations || [],
       },
     })
   } catch (err: any) {

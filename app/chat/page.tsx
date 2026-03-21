@@ -8,7 +8,8 @@ import { Card } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 import { DesignViewer } from "@/components/design-viewer"
-import { UserIdModal } from "@/components/user-id-modal"
+import { AuthModal } from "@/components/auth-modal"
+import { useAuth } from "@/lib/contexts/auth-context"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { UsageIndicator } from "@/components/usage-indicator"
@@ -68,6 +69,7 @@ interface ChatHistory {
 
 export default function ChatPage() {
   const { translations, language, setLanguage } = useApp()
+  const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
 
   const [messages, setMessages] = useState<Message[]>([
@@ -104,6 +106,13 @@ export default function ChatPage() {
   const [animateAudio, setAnimateAudio] = useState<boolean>(false)
   const animateFileRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Check if user is authenticated, show AuthModal if not
+  useEffect(() => {
+    if (!authLoading && !user) {
+      setShowUserModal(true)
+    }
+  }, [user, authLoading])
 
   const functionsList = [
     { id: "image", label: translations.fn_image, icon: Image, prompt: language === "ar" ? "اعملي صورة " : "Generate an image of " },
