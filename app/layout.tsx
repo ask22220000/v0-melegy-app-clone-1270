@@ -1,16 +1,13 @@
 import type React from "react"
 import type { Metadata } from "next"
- v0/ask22220000-6eeef137
 import { Cairo, Geist_Mono } from "next/font/google"
 import { AppProvider } from "@/lib/contexts/AppContext"
 import { AuthProvider } from "@/lib/contexts/auth-context"
 import { SessionTracker } from "@/components/session-tracker"
 
 import { Tajawal } from "next/font/google"
- main
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
-import { AppProvider } from "@/lib/contexts/AppContext"
 
 const tajawal = Tajawal({
   subsets: ["arabic", "latin"],
