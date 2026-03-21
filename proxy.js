@@ -1,11 +1,8 @@
-import { type NextRequest } from "next/server"
-import { updateSession } from "@/lib/supabase/middleware"
-
-export async function POST(request: NextRequest) {
-  const response = await updateSession(request)
-  return response
+export async function POST(request) {
+  const { updateSession } = await import("./lib/supabase/middleware.js")
+  return await updateSession(request)
 }
 
-export function GET(request: NextRequest) {
+export function GET() {
   return new Response("Proxy is working", { status: 200 })
 }
