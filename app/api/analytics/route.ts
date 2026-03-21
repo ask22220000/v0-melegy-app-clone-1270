@@ -33,7 +33,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json() as any;
-    const { action, data } = body;
+    const action = body.action;
+    const data = body.data;
 
     if (!action) return NextResponse.json({ ok: true });
 
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
       if (userId) {
         await supabase.from("subscriptions")
           .update({ last_active: new Date().toISOString() })
-          .eq("auth_user_id", userId)
+          .filter("auth_user_id", "eq", userId)
           .catch(() => { });
       }
       if (userFingerprint) {
