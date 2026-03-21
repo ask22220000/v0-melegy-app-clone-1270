@@ -3,8 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as any
-    const { paymentId, plan } = body
+    const { paymentId, plan } = await request.json()
 
     console.log("[v0] Verifying Kashier payment:", { paymentId, plan })
 
@@ -15,20 +14,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get user IP
     const userIp = request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip") ||
       "unknown"
 
-    const supabase = await createClient() as any
+    const supabase = await createClient()
 
-    // استخدام .maybeSingle() بدل .single() عشان ميضربش Error لو ملقاش اشتراك
+    // Check if payment already processed
     const { data: existingSubscription } = await supabase
       .from("subscriptions")
       .select("*")
       .eq("kashier_payment_id", paymentId)
-      .maybeSingle()
+      .single()
 
-    if (existingSubscription && (existingSubscription as any).payment_status === "completed") {
+    if (existingSubscription && existingSubscription.payment_status === "completed") {
+      console.log("[v0] Payment already processed:", paymentId)
       return NextResponse.json({
         success: true,
         status: "completed",
@@ -36,14 +37,18 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // تصحيح الاسم لـ KASHIER_API_KEY
-    const kashierApiKey = process.env.KASHIER_API_KEY
-    const kashierMerchantId = process.env.NEXT_PUBLIC_KASHIER_MID
+    // In production, verify with Kashier API
+    // For now, we'll check if payment exists and mark as completed
+    // TODO: Add actual Kashier API verification when API key is provided
+
+    const kashierApiKey = process.env.KASHER_API_KEY
+    const kashierMerchantId = process.env.NEXT_PUBLIC_KASHER_MID
 
     let paymentStatus = "pending"
 
     if (kashierApiKey && kashierMerchantId) {
       try {
+        // Call Kashier API to verify payment
         const kashierResponse = await fetch(
           `https://api.kashier.io/transactions/${paymentId}`,
           {
@@ -55,7 +60,10 @@ export async function POST(request: NextRequest) {
         )
 
         if (kashierResponse.ok) {
-          const kashierData = await kashierResponse.json() as any
+          const kashierData = await kashierResponse.json()
+          console.log("[v0] Kashier API response:", kashierData)
+
+          // Check if payment is successful based on Kashier's response
           if (kashierData.status === "SUCCESS" || kashierData.status === "PAID") {
             paymentStatus = "completed"
           } else if (kashierData.status === "FAILED" || kashierData.status === "CANCELLED") {
@@ -66,9 +74,20 @@ export async function POST(request: NextRequest) {
         console.error("[v0] Error calling Kashier API:", error)
       }
     } else {
-      paymentStatus = existingSubscription ? "completed" : "pending"
+      // Fallback: Auto-approve after first check (for testing without API key)
+      // In production, this should NOT happen - always verify with Kashier
+      console.warn("[v0] No Kashier API credentials found - using fallback verification")
+
+      if (!existingSubscription) {
+        // First time seeing this payment - mark as pending
+        paymentStatus = "pending"
+      } else {
+        // Second check onwards - assume completed for testing
+        paymentStatus = "completed"
+      }
     }
 
+    // Map plan to database values
     const planMap: Record<string, string> = {
       startup: "Start UP",
       pro: "Pro",
@@ -82,10 +101,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (paymentStatus === "completed") {
+      // Create or update subscription
       const expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + 30)
+      expiresAt.setDate(expiresAt.getDate() + 30) // 30 days from now
 
-      const subscriptionData: any = {
+      const subscriptionData = {
         user_ip: userIp,
         plan_name: planMap[plan] || plan,
         status: "active",
@@ -93,32 +113,55 @@ export async function POST(request: NextRequest) {
         expires_at: expiresAt.toISOString(),
         kashier_payment_id: paymentId,
         payment_status: "completed",
-        payment_link: paymentLinks[plan] || "",
+        payment_link: paymentLinks[plan],
         created_at: new Date().toISOString(),
       }
 
       if (existingSubscription) {
+        // Update existing
         const { data, error } = await supabase
           .from("subscriptions")
           .update(subscriptionData)
-          .eq("id", (existingSubscription as any).id)
+          .eq("id", existingSubscription.id)
           .select()
-          .maybeSingle()
+          .single()
 
-        if (error) throw error
-        return NextResponse.json({ success: true, status: "completed", subscription: data })
+        if (error) {
+          console.error("[v0] Error updating subscription:", error)
+          throw error
+        }
+
+        console.log("[v0] Subscription updated:", data)
+
+        return NextResponse.json({
+          success: true,
+          status: "completed",
+          subscription: data,
+        })
       } else {
+        // Create new
         const { data, error } = await supabase
           .from("subscriptions")
           .insert([subscriptionData])
           .select()
-          .maybeSingle()
+          .single()
 
-        if (error) throw error
-        return NextResponse.json({ success: true, status: "completed", subscription: data })
+        if (error) {
+          console.error("[v0] Error creating subscription:", error)
+          throw error
+        }
+
+        console.log("[v0] Subscription created:", data)
+
+        return NextResponse.json({
+          success: true,
+          status: "completed",
+          subscription: data,
+        })
       }
     }
 
+    // Payment still pending or failed
     return NextResponse.json({
       success: false,
       status: paymentStatus,
@@ -126,6 +169,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("[v0] Error in verify-kashier-payment:", error)
-    return NextResponse.json({ success: false, error: "Failed to verify payment" }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: "Failed to verify payment" },
+      { status: 500 }
+    )
   }
 }

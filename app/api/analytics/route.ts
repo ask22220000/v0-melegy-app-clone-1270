@@ -117,6 +117,7 @@ export async function POST(request: Request) {
     }
 
 
+
     if (action === "trackUser") {
 
       const { userId, userFingerprint } = body.data ?? {}
