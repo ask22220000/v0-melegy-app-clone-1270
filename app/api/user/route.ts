@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
         voice_minutes_daily_reset_at: now,
         image_edits_used: 0,
         image_edits_daily_reset_at: now,
+        videos_used: 0,
+        videos_daily_reset_at: now,
         created_at: now,
         last_seen_at: now,
         user_agent: request.headers.get("user-agent") || "",
@@ -78,7 +80,7 @@ export async function GET(request: NextRequest) {
     // Get user with plan info
     const { data: user, error } = await db
       .from("melegy_users")
-      .select("mlg_user_id, plan, plan_expires_at, messages_used, messages_daily_reset_at, voice_minutes_used, image_edits_used, created_at")
+      .select("mlg_user_id, plan, plan_expires_at, messages_used, messages_daily_reset_at, voice_minutes_used, image_edits_used, videos_used, videos_daily_reset_at, created_at")
       .eq("mlg_user_id", mlgUserId)
       .maybeSingle()
 
@@ -88,7 +90,7 @@ export async function GET(request: NextRequest) {
     // Get plan limits
     const { data: planLimit } = await db
       .from("plan_limits")
-      .select("label, daily_messages, daily_image_edits, daily_voice_minutes")
+      .select("label, daily_messages, daily_image_edits, daily_image_generations, daily_voice_minutes, daily_videos")
       .eq("plan", user.plan)
       .maybeSingle()
 
@@ -124,6 +126,10 @@ export async function GET(request: NextRequest) {
         daily_voice_limit: planLimit?.daily_voice_minutes ?? 30,
         image_edits_used: user.image_edits_used,
         daily_image_edits_limit: planLimit?.daily_image_edits ?? 3,
+        image_generations_used: 0,
+        daily_image_generations_limit: planLimit?.daily_image_generations ?? 3,
+        videos_used: user.videos_used,
+        daily_videos_limit: planLimit?.daily_videos ?? 3,
         conversations: conversations || [],
       },
     })

@@ -42,19 +42,21 @@ create table if not exists plan_limits (
   daily_image_edits integer default 3,
   daily_image_generations integer default 5,
   daily_voice_minutes numeric default 0,
+  daily_videos integer default 0,
   created_at timestamp with time zone default now()
 );
 
 -- Insert default plan limits
-insert into plan_limits (plan, label, daily_messages, daily_image_edits, daily_image_generations, daily_voice_minutes)
+insert into plan_limits (plan, label, daily_messages, daily_image_edits, daily_image_generations, daily_voice_minutes, daily_videos)
 values
-  ('free', 'المجانية', 10, 3, 5, 30),
-  ('startup', 'Start UP', 100, 10, 20, 60),
-  ('pro', 'الاحترافية', 500, 50, 100, 300),
-  ('vip', 'VIP', 999999, 999999, 999999, 999999)
+  ('free', 'المجانية', 10, 3, 3, 30, 3),
+  ('startup', 'Start UP', 100, 10, 20, 60, 10),
+  ('pro', 'الاحترافية', 500, 50, 100, 300, 50),
+  ('vip', 'VIP', 999999, 999999, 999999, 999999, 999999)
 on conflict (plan) do update set
   label = excluded.label,
   daily_messages = excluded.daily_messages,
   daily_image_edits = excluded.daily_image_edits,
   daily_image_generations = excluded.daily_image_generations,
-  daily_voice_minutes = excluded.daily_voice_minutes;
+  daily_voice_minutes = excluded.daily_voice_minutes,
+  daily_videos = excluded.daily_videos;
