@@ -1,0 +1,7 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build --no-lint",
+  "devCommand": "next dev --port 3000 --hostname 0.0.0.0",
+  "installCommand": "npm install",
+  "outputDirectory": ".next"
+}
