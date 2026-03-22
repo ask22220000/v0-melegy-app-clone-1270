@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
       const buffer = await file.arrayBuffer()
 
       if (fileType === "xlsx" || fileType === "xls" || fileType === "csv") {
-        const ExcelJS = (await import("exceljs")).default
-        const workbook = new ExcelJS.Workbook()
+        const { Workbook } = await import("exceljs")
+        const workbook = new Workbook()
         await workbook.xlsx.load(buffer)
         const worksheet = workbook.worksheets[0]
         const data: any[][] = []
