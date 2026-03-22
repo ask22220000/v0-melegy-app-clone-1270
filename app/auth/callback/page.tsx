@@ -4,6 +4,11 @@ import { redirect } from "next/navigation"
 export default async function AuthCallbackPage() {
   try {
     const supabase = await createClient()
+    
+    if (!supabase) {
+      redirect("/login")
+    }
+    
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -12,7 +17,7 @@ export default async function AuthCallbackPage() {
       redirect("/chat")
     }
   } catch (err) {
-    console.error("Auth callback error:", err)
+    console.error("[v0] Callback error:", err)
   }
 
   return (

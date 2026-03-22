@@ -5,9 +5,12 @@ import jwt from "jsonwebtoken"
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
 
 function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+    url || "https://dummy.supabase.co",
+    key || "dummy-key-do-not-use"
   )
 }
 
@@ -45,7 +48,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Save to melegy_history
-    const supabase = getSupabaseClient()
     const { data, error } = await supabase
       .from("melegy_history")
       .insert({

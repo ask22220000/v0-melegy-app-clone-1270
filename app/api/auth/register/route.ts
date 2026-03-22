@@ -6,14 +6,21 @@ import { NextRequest, NextResponse } from "next/server"
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
 
 function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+    url || "https://dummy.supabase.co",
+    key || "dummy-key-do-not-use"
   )
 }
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: "Server not configured properly" }, { status: 500 })
+    }
+    
     const { email, password } = await req.json()
 
     if (!email || !password) {
@@ -22,12 +29,12 @@ export async function POST(req: NextRequest) {
 
     // Check if user already exists
     const supabase = getSupabaseClient()
-    const { data: existingUsers, error: checkError } = await supabase
+    const { data } = await supabase
       .from("melegy_users")
       .select("id")
       .eq("email", email)
 
-    if (existingUsers && existingUsers.length > 0) {
+    if (data && data.length > 0) {
       return NextResponse.json({ error: "هذا البريد الإلكتروني مسجل بالفعل" }, { status: 400 })
     }
 
@@ -35,8 +42,7 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // Create user
-    const createSupabase = getSupabaseClient()
-    const { data: newUsers, error } = await createSupabase
+    const { data: newUser, error } = await supabase
       .from("melegy_users")
       .insert({
         email,
@@ -45,8 +51,7 @@ export async function POST(req: NextRequest) {
         created_at: new Date().toISOString(),
       })
       .select()
-
-    const newUser = newUsers && newUsers.length > 0 ? newUsers[0] : null
+      .single()
 
     if (error || !newUser) {
       console.error("[v0] Registration error:", error)
