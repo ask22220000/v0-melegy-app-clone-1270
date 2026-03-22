@@ -6,7 +6,7 @@
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
-    "build": "next build --no-lint"
+    "build": "next build"
   },
   "dependencies": {
     "@ai-sdk/react": "1.2.12",

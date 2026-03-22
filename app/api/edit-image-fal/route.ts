@@ -1,10 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-import * as fal from "@fal-ai/serverless-client"
+import * as fal from "@fal-ai/client"
 import { processPromptForImageEditing, NEGATIVE_PROMPT_CONSTANTS } from "@/lib/prompt-enhancer"
 
 // Increase body size limit for base64 images (50MB)
 export const maxDuration = 60 // Maximum allowed by Vercel
-export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
   try {

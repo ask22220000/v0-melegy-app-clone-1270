@@ -3,12 +3,14 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { NextRequest, NextResponse } from "next/server"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
+
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+  )
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,13 +21,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user already exists
-    const { data: existingUser } = await supabase
+    const supabase = getSupabaseClient()
+    const { data: existingUsers, error: checkError } = await supabase
       .from("melegy_users")
       .select("id")
       .eq("email", email)
-      .single()
 
-    if (existingUser) {
+    if (existingUsers && existingUsers.length > 0) {
       return NextResponse.json({ error: "هذا البريد الإلكتروني مسجل بالفعل" }, { status: 400 })
     }
 
@@ -33,7 +35,8 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // Create user
-    const { data: newUser, error } = await supabase
+    const createSupabase = getSupabaseClient()
+    const { data: newUsers, error } = await createSupabase
       .from("melegy_users")
       .insert({
         email,
@@ -42,7 +45,8 @@ export async function POST(req: NextRequest) {
         created_at: new Date().toISOString(),
       })
       .select()
-      .single()
+
+    const newUser = newUsers && newUsers.length > 0 ? newUsers[0] : null
 
     if (error || !newUser) {
       console.error("[v0] Registration error:", error)
