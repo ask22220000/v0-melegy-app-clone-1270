@@ -1,24 +1,10 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Cairo, Geist_Mono } from "next/font/google"
 import { AppProvider } from "@/lib/contexts/AppContext"
 import { AuthProvider } from "@/lib/contexts/auth-context"
 import { SessionTracker } from "@/components/session-tracker"
-import { Tajawal } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
-
-const tajawal = Tajawal({
-  subsets: ["arabic", "latin"],
-  weight: ["200", "300", "400", "500", "700", "800", "900"],
-  variable: "--font-tajawal",
-})
-
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "700"],
-  variable: "--font-cairo",
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://melegy.app"),
@@ -79,7 +65,7 @@ export default function RootLayout({
         {/* Service Worker Registration */}
         <script src="/register-sw.js" defer></script>
       </head>
-      <body className={`${tajawal.className} ${cairo.className} antialiased`} suppressHydrationWarning>
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <AuthProvider>
           <AppProvider>
             <SessionTracker />
