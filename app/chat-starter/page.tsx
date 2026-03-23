@@ -12,7 +12,6 @@ import Link from "next/link"
 import { checkSubscriptionAccess } from "@/lib/subscription-check"
 import { setActiveSubscription } from "@/lib/set-subscription"
 import { UsageIndicator } from "@/components/usage-indicator"
-import { UserIdModal } from "@/components/user-id-modal"
 import { useRouter } from "next/navigation"
 import { canSendMessage, canGenerateImage, incrementMessageUsage, incrementImageUsage, canAnimateVideoSync, incrementVideoUsage } from "@/lib/usage-tracker"
 import {
@@ -97,8 +96,6 @@ export default function ChatStarterPage() {
   const [showFunctionsMenu, setShowFunctionsMenu] = useState(false)
   const [theme, setTheme] = useState<"light" | "dark">("dark")
   const [subscriptionChecked, setSubscriptionChecked] = useState(false)
-  const [mlgUserId, setMlgUserId] = useState<string | null>(null)
-  const [showUserModal, setShowUserModal] = useState(false)
   // Animate-image states
   const [showAnimateModal, setShowAnimateModal] = useState(false)
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false)
@@ -191,10 +188,8 @@ export default function ChatStarterPage() {
   // Initialize user from localStorage
   useEffect(() => {
     const storedId = localStorage.getItem("mlg_user_id")
-    if (storedId) {
-      setMlgUserId(storedId)
-    } else {
-      setShowUserModal(true)
+    if (!storedId) {
+      window.location.href = '/login'
     }
   }, [])
 
@@ -763,7 +758,7 @@ export default function ChatStarterPage() {
     }
   }
 
-  // حفظ المحادثة الحالية في Supabase
+  // حفظ المحادثة الحالية ف�� Supabase
   const saveCurrentConversation = async () => {
     if (messages.length <= 1) {
       toast({
@@ -784,7 +779,7 @@ export default function ChatStarterPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mlg_user_id: mlgUserId,
+          mlg_user_id: null,
           chat_title: title.substring(0, 50),
           chat_date: new Date().toLocaleDateString("ar-EG"),
           messages: messages,
@@ -1274,12 +1269,6 @@ export default function ChatStarterPage() {
               </div>
               <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: "Cairo, sans-serif" }}>{animateMode === "i2v" ? "الصورة هتتحرك بشكل سلس (10 ثانية)" : "الشخصية هتظهر في مشهد جديد حسب البرومبت (10 ثانية)"}</p>
             </div>
-            <div className="mb-4 flex items-center justify-between bg-gray-800 rounded-lg px-4 py-3 border border-gray-600">
-              <span className="text-sm text-gray-300" style={{ fontFamily: "Cairo, sans-serif" }}>توليد صوت مع الفيديو</span>
-              <button onClick={() => setAnimateAudio((v) => !v)} className={`relative w-12 h-6 rounded-full transition-colors ${animateAudio ? "bg-purple-600" : "bg-gray-600"}`}>
-                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${animateAudio ? "right-1" : "left-1"}`} />
-              </button>
-            </div>
             <div className="mb-5">
               <p className="text-xs text-gray-400 mb-2" style={{ fontFamily: "Cairo, sans-serif" }}>البرومبت (عربي أو إنجليزي)</p>
               <textarea value={animatePrompt} onChange={(e) => setAnimatePrompt(e.target.value)} placeholder={animateMode === "i2v" ? "مثال: الشعر يتحرك مع الريح..." : "مثال: الشخصية بتمشي في الشارع..."} className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-sm resize-none min-h-[80px] focus:outline-none focus:border-purple-500" style={{ fontFamily: "Cairo, sans-serif" }} dir="rtl" />
@@ -1337,14 +1326,6 @@ export default function ChatStarterPage() {
         </div>
       )}
       <Toaster />
-      {showUserModal && (
-        <UserIdModal
-          onUserReady={(userId, plan, isNew) => {
-            setMlgUserId(userId)
-            setShowUserModal(false)
-          }}
-        />
-      )}
     </div>
   )
 }

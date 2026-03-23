@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import * as fal from "@fal-ai/serverless-client"
+import * as fal from "@fal-ai/client"
 import { IMAGE_EDIT_QUALITY_CONSTANTS } from "@/lib/prompt-enhancer"
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const translatedPrompt = await translateWithPerplexity(prompt)
     console.log("[v0] 2. Translated edit prompt:", translatedPrompt)
 
-    const enhancedPrompt = `${translatedPrompt}, high quality, detailed, professional. ${IMAGE_EDIT_QUALITY_CONSTANTS}`
+    const enhancedPrompt = `${translatedPrompt}. ${IMAGE_EDIT_QUALITY_CONSTANTS}`
     console.log("[v0] 3. Enhanced edit prompt:", enhancedPrompt)
 
     let editedImageUrl: string | undefined
@@ -121,6 +121,10 @@ export async function POST(request: NextRequest) {
         input: {
           prompt: enhancedPrompt,
           image_urls: [imageUrl],
+v0/ask22220000-3548c2c3
+          num_inference_steps: 45,
+          guidance_scale: 8.5,
+main
           num_images: 1,
           output_format: "png",
           safety_tolerance: "4",
