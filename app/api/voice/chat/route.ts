@@ -3,20 +3,28 @@ import { generateText } from "ai"
 export const runtime = "nodejs"
 export const maxDuration = 30
 
-const VOICE_SYSTEM_PROMPT = `أنت ميليجي، صاحب المستخدم المصري الودود. بتتكلم بالعامية المصرية الطبيعية زي ما الناس بتتكلم في الشارع المصري.
+const VOICE_SYSTEM_PROMPT = `أنت ميليجي، صاحب المستخدم المصري الودود. بتتكلم بالعامية المصرية الطبيعية تماماً زي ما الناس بتتكلم في الشارع المصري.
 
-قواعد صارمة لازم تتبعها:
-١. رد بجملة واحدة أو جملتين بالكتير - مش أكتر خالص.
-٢. العامية المصرية الطبيعية فقط - زي: "آه تمام"، "لأ ده مش صح"، "جامد أوي"، "ماشي يسطا"، "يعني إيه ده"، "معلش"، "دلوقتي"، "بقى"، "برضو"، "خالص".
-٣. ممنوع تماماً: نجوم، أرقام مرقمة، نقاط تعداد، markdown، إيموجي، كلام رسمي أو أكاديمي.
-٤. ممنوع تبدأ ردك بـ "بالتأكيد" أو "طبعاً" أو "يسعدني" أو "بكل سرور" - دي كلمات رسمية مش طبيعية.
-٥. لو السؤال عن أخبار أو معلومات حالية، جاوب مباشرة بالمعلومة بدون مقدمات.
-٦. الرسائل جاية من تحويل صوت لنص - افهم المقصود حتى لو في أخطاء إملائية وصحح فهمك ورد صح.
-٧. لو السؤال محتاج رقم أو تاريخ، قوله بالكلام مش بالأرقام.
+---
+مهمتك الأساسية:
+- الكلام الجاي ليك جاي من تحويل صوت لنص (Speech-to-Text) وممكن يكون فيه أخطاء إملائية أو كلمات مش واضحة. افهم قصد الكلام صح حتى لو الكتابة غلط، وأجاوب على المعنى الصح.
+- أمثلة على أخطاء الـ STT المصري: "ازيك" تعني "إزيك"، "ايه" تعني "إيه"، "اه" تعني "آه"، "انا" تعني "أنا"، "انت" تعني "إنت".
 
-معلوماتك:
+---
+قواعد الرد الصارمة:
+١. رد بجملة أو جملتين طبيعيتين كحد أقصى — مش قائمة مش فقرات.
+٢. العامية المصرية الطبيعية فقط بدون فصحى: "آه تمام"، "لأ ده مش صح"، "جامد أوي"، "ماشي يسطا"، "يعني إيه ده"، "معلش"، "دلوقتي"، "بقى"، "برضو"، "خالص"، "ولا إيه"، "طب"، "على طول".
+٣. ممنوع تماماً: نجوم، أرقام مرقمة، نقاط تعداد، markdown، إيموجي، حروف خاصة، كلام رسمي أو أكاديمي.
+٤. ممنوع تبدأ بـ: "بالتأكيد" أو "طبعاً" أو "يسعدني" أو "بكل سرور" أو "بالطبع" — دي كلمات روبوت مش صاحب.
+٥. لو السؤال عن معلومة أو خبر، جاوب مباشرة بالمعلومة بدون مقدمات ولا تعليقات.
+٦. لو في أرقام أو تواريخ، قولها بالكلام مش بالرقم — زي "ألفين وعشرين" بدل "2020".
+٧. لو السؤال مش واضح أو مش فاهمه، اسأل بطريقة طبيعية مصرية: "ممكن توضحلي أكتر؟" أو "تقصد إيه بالظبط؟"
+
+---
+شخصيتك:
 - اسمك ميليجي، طورتك Vision AI Studio المصرية.
-- عندك قدرة البحث على الإنترنت وتقدر تجيب أي معلومة حالية.
+- أنت صاحب ودود مش روبوت رسمي.
+- بتحب تساعد وبتكون موجود دايماً.
 - لو سألك "انت مين" قول: "أنا ميليجي مساعدك الذكي المصري".
 - لو سألك "مين طورك" قول: "طورتني Vision AI Studio المصرية".`
 
@@ -42,9 +50,9 @@ export async function POST(request: Request) {
 
     const systemWithDate = `التاريخ والوقت الحالي بالقاهرة: ${currentDateTime}. استخدم دي دايماً لأسئلة الوقت والتاريخ.\n\n${VOICE_SYSTEM_PROMPT}`
 
-    // Build messages array
+    // Build messages array — keep last 8 turns for better context
     const messages: { role: "user" | "assistant"; content: string }[] = [
-      ...(history || []).slice(-6),
+      ...(history || []).slice(-8),
       { role: "user", content: text },
     ]
 
@@ -53,23 +61,39 @@ export async function POST(request: Request) {
       model: "perplexity/sonar",
       system: systemWithDate,
       messages,
-      maxOutputTokens: 150,
-      temperature: 0.7,
+      maxOutputTokens: 200,
+      temperature: 0.75,
     })
 
-    // Strip any markdown or citations that don't belong in voice output
+    // Strip any markdown, citations, or formatting that doesn't belong in voice output
     const reply = rawReply
       .replace(/\*\*/g, "")
       .replace(/\*/g, "")
-      .replace(/\[\d+\]/g, "")
-      .replace(/#{1,6}\s/g, "")
-      .replace(/^\d+\.\s/gm, "")   // remove numbered lists
-      .replace(/^[-•]\s/gm, "")    // remove bullet points
-      .replace(/\n{2,}/g, " ")     // collapse multiple newlines
-      .replace(/\n/g, " ")         // flatten newlines for TTS
+      .replace(/\[\d+\]/g, "")          // remove citation numbers [1]
+      .replace(/#{1,6}\s/g, "")         // remove headings
+      .replace(/^\d+\.\s/gm, "")        // remove numbered lists
+      .replace(/^[-•–]\s/gm, "")        // remove bullet points
+      .replace(/\n{2,}/g, "، ")         // collapse multiple newlines to comma pause
+      .replace(/\n/g, " ")              // flatten single newlines
+      .replace(/\s{2,}/g, " ")          // collapse extra spaces
+      .replace(/[()[\]{}]/g, "")        // remove brackets
       .trim()
 
-    return Response.json({ reply })
+    // إضافة: لو الرد بيبدأ بكلام رسمي نحذفها ونبدأ من بعدها
+    const formalStarts = ["بالتأكيد،", "بالتأكيد", "طبعاً،", "طبعاً", "بالطبع،", "بالطبع", "يسعدني", "بكل سرور"]
+    let cleanReply = reply
+    for (const start of formalStarts) {
+      if (cleanReply.startsWith(start)) {
+        cleanReply = cleanReply.slice(start.length).replace(/^[،,\s]+/, "").trim()
+        // capitalize first letter if needed
+        if (cleanReply.length > 0) {
+          cleanReply = cleanReply.charAt(0).toUpperCase() + cleanReply.slice(1)
+        }
+        break
+      }
+    }
+
+    return Response.json({ reply: cleanReply || reply })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "خطأ غير معروف"
     console.error("[voice/chat] Error:", msg)

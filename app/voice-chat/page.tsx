@@ -407,14 +407,13 @@ export default function VoiceChatPage() {
 
     // STT
     const form = new FormData()
-    // Use .webm or .mp4 extension depending on type
     const ext  = blobType.includes("mp4") ? "mp4" : "webm"
     form.append("audio", blob, `audio.${ext}`)
     let sttText = ""
     try {
       const res  = await fetch("/api/voice/stt", { method: "POST", body: form })
       const data = await res.json()
-      if (!res.ok || !data.text?.trim()) throw new Error(data.error || "مفيش كلام واضح")
+      if (!res.ok || !data.text?.trim()) throw new Error(data.error || "مفيش كلام واضح، اتكلم بوضوح وحاول تاني")
       sttText = data.text.trim()
       setTranscript(sttText)
     } catch (e: unknown) {
@@ -423,12 +422,15 @@ export default function VoiceChatPage() {
       return
     }
 
-    // LLM
+    // LLM — نبعت الكلام مع ملاحظة إنه جاي من STT عشان يصحح الفهم
     try {
       const res  = await fetch("/api/voice/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: sttText, history: historyRef.current.slice(-8) }),
+        body: JSON.stringify({
+          text: sttText,
+          history: historyRef.current.slice(-8),
+        }),
       })
       const data = await res.json()
       if (!res.ok || !data.reply) throw new Error(data.error || "فشل الرد")
@@ -584,21 +586,42 @@ export default function VoiceChatPage() {
         </p>
 
         {transcript && (
-          <div className="w-full max-w-xs sm:max-w-sm text-center px-4">
-            <span className="block text-white/25 text-[10px] sm:text-xs mb-1">قلت</span>
-            <span className="text-white/55 text-xs sm:text-sm leading-relaxed line-clamp-3">{transcript}</span>
+          <div
+            className="w-full max-w-sm text-center px-5 py-2 rounded-2xl"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <span className="block text-white/30 text-[10px] sm:text-xs mb-1.5 tracking-wider">إنت قلت</span>
+            <span
+              className="text-white/70 text-sm sm:text-[15px] leading-relaxed"
+              style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+            >
+              {transcript}
+            </span>
           </div>
         )}
 
         {reply && (
-          <div className="w-full max-w-xs sm:max-w-sm text-center px-4">
-            <span className="block text-cyan-400/35 text-[10px] sm:text-xs mb-1">ميليجي</span>
-            <span className="text-cyan-300/75 text-xs sm:text-sm leading-relaxed line-clamp-4">{reply}</span>
+          <div
+            className="w-full max-w-sm text-center px-5 py-2 rounded-2xl"
+            style={{ background: "rgba(0,200,230,0.06)", border: "1px solid rgba(0,210,240,0.12)" }}
+          >
+            <span className="block text-cyan-400/50 text-[10px] sm:text-xs mb-1.5 tracking-wider">ميليجي</span>
+            <span
+              className="text-cyan-100/85 text-sm sm:text-[15px] leading-relaxed font-medium"
+              style={{ display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+            >
+              {reply}
+            </span>
           </div>
         )}
 
         {errorMsg && (
-          <p className="text-red-400/80 text-xs sm:text-sm px-6 text-center">{errorMsg}</p>
+          <div
+            className="w-full max-w-sm text-center px-4 py-2 rounded-xl"
+            style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.18)" }}
+          >
+            <p className="text-red-300/90 text-xs sm:text-sm">{errorMsg}</p>
+          </div>
         )}
       </div>
 
