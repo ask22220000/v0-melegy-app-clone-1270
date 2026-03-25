@@ -16,14 +16,14 @@ export async function POST(request: Request) {
 
     const groqForm = new FormData()
     groqForm.append("file", audioFile, "audio.webm")
-    groqForm.append("model", "whisper-large-v3-turbo")
+    groqForm.append("model", "whisper-large-v3")
     groqForm.append("language", "ar")
     groqForm.append("response_format", "verbose_json")
     groqForm.append("temperature", "0")
-    // Prompt helps Whisper understand Egyptian Arabic dialect and improves spelling accuracy
+    // Strong Egyptian Arabic dialect prompt for Whisper — improves accuracy and spelling
     groqForm.append(
       "prompt",
-      "هذا تسجيل صوتي باللهجة المصرية العامية. الكلام يحتوي على أسئلة ومحادثات يومية بالعربية. يرجى كتابة النص بدقة إملائية صحيحة."
+      "محادثة بالعامية المصرية. كلمات شائعة: إيه، ازيك، عامل إيه، تمام، ماشي، جامد، عشان، بتاع، مش، لأ، آه، دلوقتي، قبل كده، بعدين، إمتى، فين، مين، إزاي، ليه، ده، دي، دول، هو، هي، هما، أنا، إنت، إحنا، ياسلام، يعني، خالص، كمان، برضو، بقى، إيه ده، معلش. الكلام عن الحياة اليومية والأسئلة العامة. اكتب النص كما نُطق بالعامية المصرية بإملاء صحيح."
     )
 
     const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {

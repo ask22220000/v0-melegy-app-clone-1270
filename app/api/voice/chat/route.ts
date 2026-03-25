@@ -3,28 +3,22 @@ import { generateText } from "ai"
 export const runtime = "nodejs"
 export const maxDuration = 30
 
-const VOICE_SYSTEM_PROMPT = `أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! طورتك Vision AI Studio المصرية.
+const VOICE_SYSTEM_PROMPT = `أنت ميليجي، صاحب المستخدم المصري الودود. بتتكلم بالعامية المصرية الطبيعية زي ما الناس بتتكلم في الشارع المصري.
 
-**شخصيتك:**
-- كلم الناس بطريقة ودودة ومبهجة زي صاحبهم المقرب
-- متكونش جاف - اتكلم بحماس واهتمام حقيقي
-- لما تشرح حاجة، شرحها بأسلوب مصري سلس ومبسط
+قواعد صارمة لازم تتبعها:
+١. رد بجملة واحدة أو جملتين بالكتير - مش أكتر خالص.
+٢. العامية المصرية الطبيعية فقط - زي: "آه تمام"، "لأ ده مش صح"، "جامد أوي"، "ماشي يسطا"، "يعني إيه ده"، "معلش"، "دلوقتي"، "بقى"، "برضو"، "خالص".
+٣. ممنوع تماماً: نجوم، أرقام مرقمة، نقاط تعداد، markdown، إيموجي، كلام رسمي أو أكاديمي.
+٤. ممنوع تبدأ ردك بـ "بالتأكيد" أو "طبعاً" أو "يسعدني" أو "بكل سرور" - دي كلمات رسمية مش طبيعية.
+٥. لو السؤال عن أخبار أو معلومات حالية، جاوب مباشرة بالمعلومة بدون مقدمات.
+٦. الرسائل جاية من تحويل صوت لنص - افهم المقصود حتى لو في أخطاء إملائية وصحح فهمك ورد صح.
+٧. لو السؤال محتاج رقم أو تاريخ، قوله بالكلام مش بالأرقام.
 
-**أسلوب الرد (مهم جداً - الرد هيتقرأ بصوت عالي):**
-- تحدث بالعامية المصرية بطريقة طبيعية جداً
-- استخدم تعبيرات مصرية حقيقية: "تمام"، "ماشي"، "جامد"، "حلو أوي"
-- ردودك لازم تكون قصيرة ومباشرة - جملة أو جملتين بالكتير
-- متستخدمش إيموجي أو رموز أو markdown أو نجوم - دول مش هيبانوا في الصوت
-- رد على السؤال اللي اتسأل بس - متزودش معلومات زيادة
-
-**معلومات عنك:**
-- لو سألك "انت مين؟" قول: "أنا ميليجي، مساعدك الذكي المصري اللي هيساعدك في أي حاجة تحتاجها"
-- لو سألك "مين طورك؟" قول: "طورتني Vision AI Studio المصرية، شركة مصرية متخصصة في الذكاء الاصطناعي"
-- لو سأل عن التواصل: "تقدر تتواصل معاهم على aistudio-vision.com"
-
-**تحويل الصوت لنص:**
-- الرسائل جاية من تحويل صوت لنص، فممكن يكون فيها أخطاء إملائية
-- افهم المقصود من السياق ورد بشكل صح حتى لو في أخطاء في النص`
+معلوماتك:
+- اسمك ميليجي، طورتك Vision AI Studio المصرية.
+- عندك قدرة البحث على الإنترنت وتقدر تجيب أي معلومة حالية.
+- لو سألك "انت مين" قول: "أنا ميليجي مساعدك الذكي المصري".
+- لو سألك "مين طورك" قول: "طورتني Vision AI Studio المصرية".`
 
 export async function POST(request: Request) {
   try {
@@ -48,32 +42,37 @@ export async function POST(request: Request) {
 
     const systemWithDate = `التاريخ والوقت الحالي بالقاهرة: ${currentDateTime}. استخدم دي دايماً لأسئلة الوقت والتاريخ.\n\n${VOICE_SYSTEM_PROMPT}`
 
-    // Build messages array — same format as perplexity-chat
+    // Build messages array
     const messages: { role: "user" | "assistant"; content: string }[] = [
-      ...(history || []).slice(-8),
+      ...(history || []).slice(-6),
       { role: "user", content: text },
     ]
 
-    // Always use perplexity/sonar via Vercel AI Gateway — has live web search built-in
+    // perplexity/sonar — fast, natural, has live web search built-in
     const { text: rawReply } = await generateText({
       model: "perplexity/sonar",
       system: systemWithDate,
       messages,
-      maxOutputTokens: 200,
-      temperature: 0.75,
+      maxOutputTokens: 150,
+      temperature: 0.7,
     })
 
-    // Strip markdown/citations that don't belong in voice output
+    // Strip any markdown or citations that don't belong in voice output
     const reply = rawReply
       .replace(/\*\*/g, "")
       .replace(/\*/g, "")
       .replace(/\[\d+\]/g, "")
       .replace(/#{1,6}\s/g, "")
+      .replace(/^\d+\.\s/gm, "")   // remove numbered lists
+      .replace(/^[-•]\s/gm, "")    // remove bullet points
+      .replace(/\n{2,}/g, " ")     // collapse multiple newlines
+      .replace(/\n/g, " ")         // flatten newlines for TTS
       .trim()
 
     return Response.json({ reply })
-  } catch (err: any) {
-    console.error("[voice/chat] Error:", err?.message)
-    return Response.json({ error: err.message }, { status: 500 })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
+    console.error("[voice/chat] Error:", msg)
+    return Response.json({ error: msg }, { status: 500 })
   }
 }
