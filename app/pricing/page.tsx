@@ -46,10 +46,11 @@ export default function PricingPage() {
       name: "خطة Start UP",
       nameEn: "Start UP",
       description: "للمبتدئين والطلاب",
-      price: "39",
+      price: "49",
       period: "شهرياً",
       features: [
         "توليد 10 صور يومياً",
+        "توليد 5 فيديوهات يومياً",
         "كتابة نصوص قصيرة (حتى 500 كلمة)",
         "شيتات بسيطة (حتى 50 صفوف)",
         "5 اقتراحات أفكار يومياً",
@@ -70,10 +71,11 @@ export default function PricingPage() {
       name: "الخطة الاحترافية",
       nameEn: "Pro",
       description: "للمحترفين وأصحاب المشاريع",
-      price: "99",
+      price: "129",
       period: "شهرياً",
       features: [
         "توليد 100 صورة يومياً",
+        "توليد 20 فيديو يومياً",
         "كتابة نصوص كاملة (غير محدودة)",
         "شيتات متقدمة (حتى 1000 صف)",
         "اقتراحات أفكار غير محدودة",
@@ -94,10 +96,11 @@ export default function PricingPage() {
       name: "الخطة VIP",
       nameEn: "VIP",
       description: "كل شيء بلا حدود مع دعم فوري",
-      price: "250",
+      price: "299",
       period: "شهرياً",
       features: [
         "توليد صور غير محدود",
+        "توليد فيديو غير محدود",
         "كل الميزات السابقة بدون حدود",
         "شيتات مع تحليل بيانات",
         "أفكار مخصصة متقدمة",
@@ -111,7 +114,7 @@ export default function PricingPage() {
       popular: false,
       paypalId: null,
       kasherLink: "https://checkouts.kashier.io/ar/paymentpage?ppLink=PP-1817925703,live",
-      link: "/chat-advanced",
+      link: "/chat-vip",
     },
   ]
 
@@ -135,7 +138,7 @@ export default function PricingPage() {
               }),
             onApprove: (data: any) => {
               alert("تم الاشتراك بنجاح! رقم الاشتراك: " + data.subscriptionID)
-              window.location.href = "/chat-advanced"
+              window.location.href = "/chat-vip"
             },
           })
           .render("#paypal-button-container-P-7Y891040P38339115NFHYM4Q")
