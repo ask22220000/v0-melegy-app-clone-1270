@@ -3,24 +3,36 @@ import { headers } from "next/headers"
 import * as fal from "@fal-ai/serverless-client"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
-import { getDailyUsage, getEffectivePlan, todayEgypt } from "@/lib/db"
+import { createClient } from "@supabase/supabase-js"
 import { PLAN_LIMITS } from "@/lib/usage-tracker"
 
 const FREE_VIDEO_LIMIT = PLAN_LIMITS.free.animatedVideosPerDay
 
-async function checkVideoLimit(userId: string): Promise<{ allowed: boolean; reason?: string }> {
+function todayDate() {
+  return new Date().toISOString().split("T")[0]
+}
+
+async function checkVideoLimit(ip: string): Promise<{ allowed: boolean; reason?: string }> {
   try {
-    const plan = await getEffectivePlan(userId)
-    const limits = PLAN_LIMITS[plan]
-    if (limits.animatedVideosPerDay === -1) return { allowed: true }
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    const { data } = await supabase
+      .from("user_usage")
+      .select("animated_videos, plan")
+      .eq("user_ip", ip)
+      .eq("usage_date", todayDate())
+      .maybeSingle()
 
-    const usage = await getDailyUsage(userId, todayEgypt())
-    const used = usage.animated_videos ?? 0
+    const plan: string = data?.plan ?? "free"
+    if (plan !== "free") return { allowed: true }
 
-    if (used >= limits.animatedVideosPerDay) {
+    const used: number = data?.animated_videos ?? 0
+    if (used >= FREE_VIDEO_LIMIT) {
       return {
         allowed: false,
-        reason: `لقد وصلت للحد الأقصى (${limits.animatedVideosPerDay} فيديو/يوم) في خطة ${limits.name}. قم بالترقية للمزيد!`,
+        reason: `لقد وصلت للحد الأقصى (${FREE_VIDEO_LIMIT} فيديو/يوم) في الخطة المجانية. قم بالترقية للمزيد!`,
       }
     }
     return { allowed: true }
