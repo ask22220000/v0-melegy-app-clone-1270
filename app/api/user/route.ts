@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { ensureUserMeta, getUserMeta } from "@/lib/db"
 
-// Create a fresh Supabase client per request — no singleton, no cache issues
-// Uses service role key if available, falls back to anon key
-function getClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    db: { schema: "public" },
-  })
+export const runtime = "nodejs"
+
+const PLAN_DAILY_LIMITS: Record<string, number> = {
+  free: 10,
+  startup: 50,
+  pro: 200,
+  vip: 999,
 }
 
 function generateMlgId(): string {
@@ -23,40 +19,22 @@ function generateMlgId(): string {
   return id
 }
 
-// POST /api/user — create new anonymous user with random ID
+// POST /api/user — create new anonymous user
 export async function POST() {
   try {
-    const db = getClient()
-    let mlgUserId = generateMlgId()
-
-    // Ensure uniqueness
-    for (let i = 0; i < 5; i++) {
-      const { data } = await db
-        .from("melegy_users")
-        .select("mlg_user_id")
-        .eq("mlg_user_id", mlgUserId)
-        .maybeSingle()
-      if (!data) break
-      mlgUserId = generateMlgId()
-    }
-
-    const { data: user, error } = await db
-      .from("melegy_users")
-      .insert({
-        mlg_user_id: mlgUserId,
-        plan: "free",
+    const mlgUserId = generateMlgId()
+    const meta = await ensureUserMeta(mlgUserId)
+    return NextResponse.json({
+      user: {
+        mlg_user_id: meta.userId,
+        plan: meta.plan,
         messages_used: 0,
-        created_at: new Date().toISOString(),
-        last_seen_at: new Date().toISOString(),
-      })
-      .select("mlg_user_id, plan, messages_used, created_at")
-      .single()
-
-    if (error) {
-      return NextResponse.json({ error: error.message, code: error.code, details: error.details }, { status: 500 })
-    }
-
-    return NextResponse.json({ user })
+        created_at: meta.createdAt,
+        last_seen_at: meta.updatedAt,
+        plan_label: meta.plan,
+        daily_limit: PLAN_DAILY_LIMITS[meta.plan] ?? 10,
+      },
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
@@ -69,35 +47,32 @@ export async function GET(request: NextRequest) {
     const mlgUserId = searchParams.get("id")
     if (!mlgUserId) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
-    const db = getClient()
-
-    const { data: user, error } = await db
-      .from("melegy_users")
-      .select("mlg_user_id, plan, messages_used, created_at, last_seen_at")
-      .eq("mlg_user_id", mlgUserId)
-      .maybeSingle()
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
-
-    // Get plan limits
-    const { data: limits } = await db
-      .from("plan_limits")
-      .select("daily_messages, label")
-      .eq("plan", user.plan)
-      .maybeSingle()
-
-    // Update last_seen_at (fire and forget)
-    db.from("melegy_users")
-      .update({ last_seen_at: new Date().toISOString() })
-      .eq("mlg_user_id", mlgUserId)
-      .then(() => {})
+    const meta = await getUserMeta(mlgUserId)
+    if (!meta) {
+      // Auto-create if not found
+      const created = await ensureUserMeta(mlgUserId)
+      return NextResponse.json({
+        user: {
+          mlg_user_id: created.userId,
+          plan: created.plan,
+          messages_used: 0,
+          created_at: created.createdAt,
+          last_seen_at: created.updatedAt,
+          plan_label: created.plan,
+          daily_limit: PLAN_DAILY_LIMITS[created.plan] ?? 10,
+        },
+      })
+    }
 
     return NextResponse.json({
       user: {
-        ...user,
-        plan_label: limits?.label || user.plan,
-        daily_limit: limits?.daily_messages ?? 10,
+        mlg_user_id: meta.userId,
+        plan: meta.plan,
+        messages_used: 0,
+        created_at: meta.createdAt,
+        last_seen_at: meta.updatedAt,
+        plan_label: meta.plan,
+        daily_limit: PLAN_DAILY_LIMITS[meta.plan] ?? 10,
       },
     })
   } catch (err: any) {
