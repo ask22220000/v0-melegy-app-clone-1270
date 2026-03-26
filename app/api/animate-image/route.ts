@@ -46,13 +46,16 @@ export const maxDuration = 300
 // Configure fal at module level — prevents AI Gateway override
 fal.config({ credentials: process.env.FAL_KEY })
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+// Lazy — avoids top-level instantiation during build
+function getGroq() {
+  return new Groq({ apiKey: process.env.GROQ_API_KEY })
+}
 
 async function translateToEnglish(prompt: string): Promise<string> {
   const hasArabic = /[\u0600-\u06FF]/.test(prompt)
   if (!hasArabic) return prompt
   try {
-    const res = await groq.chat.completions.create({
+    const res = await getGroq().chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
         {
