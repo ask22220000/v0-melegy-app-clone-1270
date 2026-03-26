@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getUserMeta, ensureUserMeta, getEffectivePlan } from "@/lib/db"
-import { PLAN_LIMITS } from "@/lib/usage-tracker"
+import { ensureUserMeta, getUserMeta } from "@/lib/db"
 
 export const runtime = "nodejs"
+
+const PLAN_DAILY_LIMITS: Record<string, number> = {
+  free: 10,
+  startup: 50,
+  pro: 200,
+  vip: 999,
+}
 
 function generateMlgId(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -13,15 +19,24 @@ function generateMlgId(): string {
   return id
 }
 
-// POST /api/user — create or ensure anonymous user
+// POST /api/user — create new anonymous user
 export async function POST() {
   try {
     const mlgUserId = generateMlgId()
     const meta = await ensureUserMeta(mlgUserId)
-    return NextResponse.json({ user: { mlg_user_id: meta.userId, plan: meta.plan, created_at: meta.createdAt } })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return NextResponse.json({
+      user: {
+        mlg_user_id: meta.userId,
+        plan: meta.plan,
+        messages_used: 0,
+        created_at: meta.createdAt,
+        last_seen_at: meta.updatedAt,
+        plan_label: meta.plan,
+        daily_limit: PLAN_DAILY_LIMITS[meta.plan] ?? 10,
+      },
+    })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
@@ -33,23 +48,34 @@ export async function GET(request: NextRequest) {
     if (!mlgUserId) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
     const meta = await getUserMeta(mlgUserId)
-    if (!meta) return NextResponse.json({ error: "User not found" }, { status: 404 })
-
-    const plan = await getEffectivePlan(mlgUserId)
-    const limits = PLAN_LIMITS[plan]
+    if (!meta) {
+      // Auto-create if not found
+      const created = await ensureUserMeta(mlgUserId)
+      return NextResponse.json({
+        user: {
+          mlg_user_id: created.userId,
+          plan: created.plan,
+          messages_used: 0,
+          created_at: created.createdAt,
+          last_seen_at: created.updatedAt,
+          plan_label: created.plan,
+          daily_limit: PLAN_DAILY_LIMITS[created.plan] ?? 10,
+        },
+      })
+    }
 
     return NextResponse.json({
       user: {
         mlg_user_id: meta.userId,
-        plan,
-        plan_label: limits.name,
-        daily_limit: limits.messagesPerDay,
+        plan: meta.plan,
+        messages_used: 0,
         created_at: meta.createdAt,
         last_seen_at: meta.updatedAt,
+        plan_label: meta.plan,
+        daily_limit: PLAN_DAILY_LIMITS[meta.plan] ?? 10,
       },
     })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
-    return NextResponse.json({ error: msg }, { status: 500 })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

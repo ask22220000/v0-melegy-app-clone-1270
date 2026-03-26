@@ -1,27 +1,27 @@
 /**
- * scripts/setup-dynamodb.mjs
- * Creates the single DynamoDB table for the Melegy app.
- *
- * Run: node scripts/setup-dynamodb.mjs
- *
- * Required env vars: AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, DYNAMODB_TABLE_NAME
+ * setup-dynamodb.mjs
+ * Creates the Melegy DynamoDB table if it doesn't exist.
+ * Run once: node scripts/setup-dynamodb.mjs
  */
 
-import { DynamoDBClient, CreateTableCommand, DescribeTableCommand } from "@aws-sdk/client-dynamodb"
+import {
+  DynamoDBClient,
+  CreateTableCommand,
+  DescribeTableCommand,
+} from "@aws-sdk/client-dynamodb"
 
-const region = process.env.AWS_REGION || "us-east-1"
-const tableName = process.env.DYNAMODB_TABLE_NAME
+const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME
 
-if (!tableName) {
-  console.error("ERROR: DYNAMODB_TABLE_NAME env var is required")
+if (!TABLE_NAME) {
+  console.error("DYNAMODB_TABLE_NAME env var is required")
   process.exit(1)
 }
 
-const client = new DynamoDBClient({ region })
+const client = new DynamoDBClient({ region: process.env.AWS_REGION || "us-east-1" })
 
-async function tableExists(name) {
+async function tableExists() {
   try {
-    await client.send(new DescribeTableCommand({ TableName: name }))
+    await client.send(new DescribeTableCommand({ TableName: TABLE_NAME }))
     return true
   } catch {
     return false
@@ -29,19 +29,15 @@ async function tableExists(name) {
 }
 
 async function main() {
-  console.log(`[setup] Checking table: ${tableName} in region: ${region}`)
-
-  if (await tableExists(tableName)) {
-    console.log(`[setup] Table "${tableName}" already exists — skipping creation.`)
+  if (await tableExists()) {
+    console.log(`Table "${TABLE_NAME}" already exists — nothing to do.`)
     return
   }
 
-  console.log(`[setup] Creating table "${tableName}"...`)
-
   await client.send(
     new CreateTableCommand({
-      TableName: tableName,
-      BillingMode: "PAY_PER_REQUEST", // On-demand — no capacity planning needed
+      TableName: TABLE_NAME,
+      BillingMode: "PAY_PER_REQUEST",
       AttributeDefinitions: [
         { AttributeName: "PK", AttributeType: "S" },
         { AttributeName: "SK", AttributeType: "S" },
@@ -53,16 +49,10 @@ async function main() {
     })
   )
 
-  console.log(`[setup] Table "${tableName}" created successfully.`)
-  console.log("[setup] Schema:")
-  console.log("  PK=USER#{userId}  SK=META                    → user profile + plan")
-  console.log("  PK=USER#{userId}  SK=USAGE#{YYYY-MM-DD}      → daily usage counters")
-  console.log("  PK=USER#{userId}  SK=USAGE_MONTHLY#{YYYY-MM} → monthly words/images")
-  console.log("  PK=USER#{userId}  SK=CHAT#{ts}#{id}           → conversation")
-  console.log("  PK=ANALYTICS      SK=GLOBAL                  → aggregate stats")
+  console.log(`Table "${TABLE_NAME}" created successfully.`)
 }
 
-main().catch((err) => {
-  console.error("[setup] Error:", err.message)
+main().catch((e) => {
+  console.error("Setup failed:", e.message)
   process.exit(1)
 })

@@ -1,31 +1,15 @@
 import { headers } from "next/headers"
-import { createClient } from "@supabase/supabase-js"
+import { getDailyUsage, getEffectivePlan, todayEgypt } from "@/lib/db"
 import { PLAN_LIMITS } from "@/lib/usage-tracker"
 
 const FREE_VIDEO_LIMIT = PLAN_LIMITS.free.animatedVideosPerDay
 
-function todayDate() {
-  return new Date().toISOString().split("T")[0]
-}
-
 async function checkVideoLimit(ip: string): Promise<{ allowed: boolean; reason?: string }> {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    )
-    const { data } = await supabase
-      .from("user_usage")
-      .select("animated_videos, plan")
-      .eq("user_ip", ip)
-      .eq("usage_date", todayDate())
-      .maybeSingle()
-
-    const plan: string = data?.plan ?? "free"
+    const plan = await getEffectivePlan(ip)
     if (plan !== "free") return { allowed: true }
-
-    const used: number = data?.animated_videos ?? 0
-    if (used >= FREE_VIDEO_LIMIT) {
+    const usage = await getDailyUsage(ip, todayEgypt())
+    if (usage.animated_videos >= FREE_VIDEO_LIMIT) {
       return {
         allowed: false,
         reason: `لقد وصلت للحد الأقصى (${FREE_VIDEO_LIMIT} فيديو/يوم) في الخطة المجانية. قم بالترقية للمزيد!`,

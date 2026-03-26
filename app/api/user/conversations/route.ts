@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getConversations, saveConversation, deleteConversation, ensureUserMeta } from "@/lib/db"
+import { getConversations, saveConversation, ensureUserMeta } from "@/lib/db"
 
 export const runtime = "nodejs"
 
@@ -9,57 +9,42 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("user_id")
 
-    if (!userId) {
-      return NextResponse.json({ conversations: [] })
-    }
+    if (!userId) return NextResponse.json({ error: "Missing user_id" }, { status: 400 })
 
-    const conversations = await getConversations(userId, 100)
+    const convs = await getConversations(userId, 100)
+    const conversations = convs.map((c) => ({
+      id: c.SK ?? c.id,
+      title: c.title ?? "محادثة",
+      created_at: c.createdAt ?? "",
+      updated_at: c.createdAt ?? "",
+    }))
+
     return NextResponse.json({ conversations })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
-    console.error("[user/conversations] GET error:", msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
-// POST /api/user/conversations — create new conversation
+// POST /api/user/conversations
 export async function POST(request: NextRequest) {
   try {
-    const { mlg_user_id, title, messages, date } = await request.json()
+    const { mlg_user_id, title } = await request.json()
 
-    if (!mlg_user_id) {
-      return NextResponse.json({ error: "Missing mlg_user_id" }, { status: 400 })
-    }
+    if (!mlg_user_id) return NextResponse.json({ error: "Missing mlg_user_id" }, { status: 400 })
 
     await ensureUserMeta(mlg_user_id)
 
     const id = await saveConversation({
       userId: mlg_user_id,
-      title: title ?? "محادثة جديدة",
-      date: date ?? new Date().toISOString().slice(0, 10),
-      messages: messages ?? [],
+      title: title || "محادثة جديدة",
+      date: new Date().toISOString().slice(0, 10),
+      messages: [],
     })
 
-    return NextResponse.json({ conversation: { id, title: title ?? "محادثة جديدة", createdAt: new Date().toISOString() } })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
-    console.error("[user/conversations] POST error:", msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
-  }
-}
-
-// DELETE /api/user/conversations — delete conversation by SK
-export async function DELETE(request: NextRequest) {
-  try {
-    const { user_id, sk } = await request.json()
-    if (!user_id || !sk) {
-      return NextResponse.json({ error: "Missing user_id or sk" }, { status: 400 })
-    }
-    await deleteConversation(user_id, sk)
-    return NextResponse.json({ success: true })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
-    console.error("[user/conversations] DELETE error:", msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return NextResponse.json({
+      conversation: { id, title: title || "محادثة جديدة", created_at: new Date().toISOString() },
+    })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

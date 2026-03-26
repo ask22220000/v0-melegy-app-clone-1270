@@ -1,59 +1,80 @@
 import { NextRequest, NextResponse } from "next/server"
-import { setUserSubscription, ensureUserMeta, getEffectivePlan, incrementPlanCount } from "@/lib/db"
+import { ensureUserMeta, setUserSubscription, getUserMeta, incrementPlanCount } from "@/lib/db"
 
 export const runtime = "nodejs"
 
-type ValidPlan = "startup" | "pro" | "vip"
-const VALID_PLANS: ValidPlan[] = ["startup", "pro", "vip"]
+const planMap: Record<string, "startup" | "pro" | "vip"> = {
+  startup: "startup",
+  pro: "pro",
+  vip: "vip",
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { paymentId, plan, userId } = await request.json()
+    const { paymentId, plan, userId: bodyUserId } = await request.json()
 
-    if (!paymentId || !plan || !userId) {
-      return NextResponse.json({ success: false, error: "Missing paymentId, plan, or userId" }, { status: 400 })
+    if (!paymentId || !plan) {
+      return NextResponse.json({ success: false, error: "Missing payment ID or plan" }, { status: 400 })
     }
 
-    if (!VALID_PLANS.includes(plan as ValidPlan)) {
-      return NextResponse.json({ success: false, error: "Invalid plan" }, { status: 400 })
-    }
+    const userIp =
+      request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown"
 
+    const userId = bodyUserId || userIp
+    const normalizedPlan = planMap[plan] ?? "startup"
+
+    // Verify with Kashier API if credentials exist
     const kashierApiKey = process.env.KASHER_API_KEY
     const kashierMerchantId = process.env.NEXT_PUBLIC_KASHER_MID
     let paymentStatus: "pending" | "completed" | "failed" = "pending"
 
     if (kashierApiKey && kashierMerchantId) {
       try {
-        const resp = await fetch(`https://api.kashier.io/transactions/${paymentId}`, {
+        const res = await fetch(`https://api.kashier.io/transactions/${paymentId}`, {
           headers: {
             Authorization: `Bearer ${kashierApiKey}`,
             "X-Merchant-ID": kashierMerchantId,
           },
         })
-        if (resp.ok) {
-          const data = await resp.json()
-          if (["SUCCESS", "PAID", "CAPTURED"].includes(data.status)) paymentStatus = "completed"
-          else if (["FAILED", "CANCELLED"].includes(data.status)) paymentStatus = "failed"
+        if (res.ok) {
+          const data = await res.json()
+          if (data.status === "SUCCESS" || data.status === "PAID") paymentStatus = "completed"
+          else if (data.status === "FAILED" || data.status === "CANCELLED") paymentStatus = "failed"
         }
-      } catch {
-        // Kashier API unavailable — keep pending
+      } catch (e) {
+        console.error("[verify-kashier] Kashier API error:", e)
       }
     } else {
-      // No API credentials — auto-approve for testing
-      paymentStatus = "completed"
+      // No API key — check if user already has this plan (idempotent)
+      const meta = await getUserMeta(userId)
+      if (meta && meta.plan === normalizedPlan) {
+        paymentStatus = "completed"
+      } else {
+        // First time — mark completed (testing / manual verification flow)
+        paymentStatus = "completed"
+      }
     }
 
     if (paymentStatus === "completed") {
       await ensureUserMeta(userId)
-      const prevPlan = await getEffectivePlan(userId)
-      await setUserSubscription(userId, plan as ValidPlan, 30)
-      // Update analytics plan counts
-      if (prevPlan !== plan) {
-        if (prevPlan !== "free") incrementPlanCount(prevPlan as ValidPlan, -1).catch(() => {})
-        incrementPlanCount(plan as ValidPlan, 1).catch(() => {})
-      }
+      await setUserSubscription(userId, normalizedPlan, 30)
+      await incrementPlanCount(normalizedPlan, 1)
 
-      return NextResponse.json({ success: true, status: "completed", plan })
+      const meta = await getUserMeta(userId)
+
+      return NextResponse.json({
+        success: true,
+        status: "completed",
+        subscription: {
+          user_id: userId,
+          plan_name: normalizedPlan,
+          status: "active",
+          expires_at: meta?.planExpiresAt,
+        },
+        redirectTo: `/subscription-success?plan=${normalizedPlan}&userId=${userId}`,
+      })
     }
 
     return NextResponse.json({
@@ -61,9 +82,8 @@ export async function POST(request: NextRequest) {
       status: paymentStatus,
       message: paymentStatus === "failed" ? "فشلت عملية الدفع" : "جاري معالجة الدفع",
     })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to verify payment"
-    console.error("[verify-kashier-payment] error:", msg)
-    return NextResponse.json({ success: false, error: msg }, { status: 500 })
+  } catch (error: any) {
+    console.error("[verify-kashier-payment] error:", error.message)
+    return NextResponse.json({ success: false, error: "Failed to verify payment" }, { status: 500 })
   }
 }

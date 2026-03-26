@@ -3,41 +3,36 @@ import type { NextRequest } from "next/server"
 import {
   getConversations,
   saveConversation,
-  incrementAnalytics,
+  updateConversationMessages,
   ensureUserMeta,
 } from "@/lib/db"
 
 export const runtime = "nodejs"
 
-// GET /api/save-chat?user_id=mlg_xxx — load all saved conversations for user
+// GET /api/save-chat?user_id=mlg_xxx
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("user_id")
 
-    if (!userId) {
-      return NextResponse.json({ histories: [] })
-    }
+    if (!userId) return NextResponse.json({ histories: [] })
 
-    const conversations = await getConversations(userId, 50)
-
-    const histories = conversations.map((conv) => ({
-      id: conv.id,
-      title: conv.title ?? "محادثة",
-      date: conv.date ?? "",
-      messages: conv.messages ?? [],
-      sk: (conv as any).SK, // pass SK back so frontend can update by SK
+    const conversations = await getConversations(userId, 100)
+    const histories = conversations.map((c) => ({
+      id: c.SK ?? c.id,
+      title: c.title ?? "محادثة",
+      date: c.date ?? c.createdAt?.slice(0, 10) ?? "",
+      messages: Array.isArray(c.messages) ? c.messages : [],
     }))
 
     return NextResponse.json({ histories })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
-    console.error("[save-chat] GET error:", msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+  } catch (err: any) {
+    console.error("[save-chat] GET error:", err.message)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
-// POST /api/save-chat — save or update a conversation
+// POST /api/save-chat
 export async function POST(request: Request) {
   try {
     const { chat_title, chat_date, messages, mlg_user_id } = await request.json()
@@ -46,24 +41,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing mlg_user_id" }, { status: 400 })
     }
 
-    // Ensure user exists in DB
     await ensureUserMeta(mlg_user_id)
+
+    // Check if conversation with same title+date already exists
+    const existing = await getConversations(mlg_user_id, 200)
+    const match = existing.find((c) => c.title === chat_title && c.date === chat_date)
+
+    if (match?.SK) {
+      await updateConversationMessages(mlg_user_id, match.SK, messages)
+      return NextResponse.json({ success: true, id: match.SK })
+    }
 
     const id = await saveConversation({
       userId: mlg_user_id,
-      title: chat_title ?? "محادثة",
-      date: chat_date ?? new Date().toISOString().slice(0, 10),
-      messages: typeof messages === "string" ? JSON.parse(messages) : (messages ?? []),
+      title: chat_title,
+      date: chat_date,
+      messages,
     })
 
-    // Increment global analytics counter (fire-and-forget)
-    incrementAnalytics("totalConversations").catch(() => {})
-    incrementAnalytics("totalMessages", (messages ?? []).length).catch(() => {})
-
     return NextResponse.json({ success: true, id })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
-    console.error("[save-chat] POST error:", msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+  } catch (err: any) {
+    console.error("[save-chat] POST error:", err.message)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

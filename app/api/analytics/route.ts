@@ -1,157 +1,147 @@
-import { getAnalytics, countUsersByPlan, todayEgypt } from "@/lib/db"
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
-import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb"
-import { awsCredentialsProvider } from "@vercel/functions/oidc"
+import { getAnalytics, countUsersByPlan, scanAllUsers, scanRecentChats } from "@/lib/db"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
-function getDocClient() {
-  const client = new DynamoDBClient({
-    region: process.env.AWS_REGION!,
-    credentials: awsCredentialsProvider({
-      roleArn: process.env.AWS_ROLE_ARN!,
-      clientConfig: { region: process.env.AWS_REGION },
-    }),
-  })
-  return DynamoDBDocumentClient.from(client)
-}
+// ── Vercel Analytics REST API helper ─────────────────────────────────────────
+async function fetchVercelAnalytics() {
+  const token     = process.env.VERCEL_TOKEN
+  const projectId = process.env.VERCEL_PROJECT_ID || process.env.NEXT_PUBLIC_VERCEL_PROJECT_ID
+  const teamId    = process.env.VERCEL_TEAM_ID
 
-// Scan all daily usage rows to aggregate stats
-async function aggregateDailyStats() {
-  const TABLE = process.env.DYNAMODB_TABLE_NAME!
-  const db = getDocClient()
-  const today = todayEgypt()
-
-  let totalImages = 0, totalVideos = 0, totalVoice = 0, messagesToday = 0
-  let lastKey: Record<string, any> | undefined
-
-  do {
-    const res = await db.send(new ScanCommand({
-      TableName: TABLE,
-      FilterExpression: "begins_with(SK, :prefix)",
-      ExpressionAttributeValues: { ":prefix": "USAGE#" },
-      ExclusiveStartKey: lastKey,
-    }))
-    for (const item of res.Items ?? []) {
-      totalImages += item.images ?? 0
-      totalVideos += item.animated_videos ?? 0
-      totalVoice  += item.voice_minutes ?? 0
-      if (item.date === today) messagesToday += item.messages ?? 0
-    }
-    lastKey = res.LastEvaluatedKey
-  } while (lastKey)
-
-  return { totalImages, totalVideos, totalVoice, messagesToday }
-}
-
-// Scan recent conversations for hourly activity and top queries
-async function aggregateConvStats() {
-  const TABLE = process.env.DYNAMODB_TABLE_NAME!
-  const db = getDocClient()
-  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-  const since7d  = new Date(Date.now() - 7  * 24 * 60 * 60 * 1000).toISOString()
-
-  const hourlyActivity: { hour: number; messages: number }[] =
-    Array.from({ length: 24 }, (_, i) => ({ hour: i, messages: 0 }))
-  const titleFreq: Record<string, number> = {}
-  let totalConversations = 0
-  const uniqueUsers = new Set<string>()
-  const recentUsers = new Set<string>()
-
-  let lastKey: Record<string, any> | undefined
-  do {
-    const res = await db.send(new ScanCommand({
-      TableName: TABLE,
-      FilterExpression: "begins_with(SK, :prefix)",
-      ExpressionAttributeValues: { ":prefix": "CHAT#" },
-      ProjectionExpression: "userId, createdAt, title",
-      ExclusiveStartKey: lastKey,
-    }))
-    for (const item of res.Items ?? []) {
-      totalConversations++
-      if (item.userId) {
-        uniqueUsers.add(item.userId)
-        if (item.createdAt >= since24h) recentUsers.add(item.userId)
-      }
-      if (item.createdAt >= since24h) {
-        const h = new Date(item.createdAt).getHours()
-        hourlyActivity[h].messages++
-      }
-      if (item.createdAt >= since7d && item.title) {
-        const k = (item.title as string).trim().substring(0, 60)
-        if (k.length > 2) titleFreq[k] = (titleFreq[k] ?? 0) + 1
-      }
-    }
-    lastKey = res.LastEvaluatedKey
-  } while (lastKey)
-
-  const topQueries = Object.entries(titleFreq)
-    .map(([query, count]) => ({ query, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
-
-  return {
-    totalConversations,
-    uniqueUsers: uniqueUsers.size,
-    recentUsers24h: recentUsers.size,
-    hourlyActivity,
-    topQueries,
+  if (!token || !projectId) {
+    return { pageviews: 0, visitors: 0, hourlyActivity: [] as { hour: number; messages: number }[] }
   }
+
+  const now  = Date.now()
+  const from = new Date(now - 86400000).toISOString()
+  const to   = new Date(now).toISOString()
+  const base = `https://api.vercel.com/v1/web/projects/${projectId}/analytics`
+  const teamQ = teamId ? `&teamId=${teamId}` : ""
+  const headers = { Authorization: `Bearer ${token}` }
+
+  let pageviews = 0
+  let visitors  = 0
+  const hourlyActivity: { hour: number; messages: number }[] = Array.from({ length: 24 }, (_, i) => ({ hour: i, messages: 0 }))
+
+  try {
+    const pvRes = await fetch(`${base}/pageviews?from=${from}&to=${to}&limit=1000${teamQ}`, { headers, next: { revalidate: 60 } })
+    if (pvRes.ok) {
+      const pvData = await pvRes.json()
+      const rows: any[] = pvData?.data ?? pvData?.pageviews ?? []
+      rows.forEach((r: any) => {
+        pageviews += Number(r.pageviews ?? r.count ?? r.value ?? 0)
+        visitors  += Number(r.visitors  ?? r.unique  ?? 0)
+        const ts   = r.timestamp ? new Date(r.timestamp) : null
+        if (ts) hourlyActivity[ts.getHours()].messages += Number(r.pageviews ?? r.count ?? 0)
+      })
+      if (rows.length === 0) {
+        pageviews = Number(pvData?.total?.pageviews ?? pvData?.pageviews ?? 0)
+        visitors  = Number(pvData?.total?.visitors  ?? pvData?.visitors  ?? 0)
+      }
+    }
+  } catch { /* ignore */ }
+
+  return { pageviews, visitors, hourlyActivity }
 }
 
 // ── GET ───────────────────────────────────────────────────────────────────────
 export async function GET() {
-  const [analytics, planCounts, dailyStats, convStats] = await Promise.all([
-    getAnalytics(),
-    countUsersByPlan(),
-    aggregateDailyStats(),
-    aggregateConvStats(),
-  ])
+  try {
+    // 1. Global analytics counters from DynamoDB
+    const [globalStats, planCounts, allUsers, recentChats] = await Promise.all([
+      getAnalytics(),
+      countUsersByPlan(),
+      scanAllUsers(),
+      scanRecentChats(14),
+    ])
 
-  const subscriptionsByPlan = {
-    free:     planCounts.free    ?? 0,
-    starter:  planCounts.startup ?? 0,
-    pro:      planCounts.pro     ?? 0,
-    advanced: planCounts.vip     ?? 0,
+    const totalUsers       = allUsers.length
+    const now              = Date.now()
+    const since24h         = now - 86400000
+    const recentUsers24h   = allUsers.filter(u => u.updatedAt && new Date(u.updatedAt).getTime() > since24h).length
+
+    // Hourly activity from recent chats
+    const hourlyFromDB: { hour: number; messages: number }[] = Array.from({ length: 24 }, (_, i) => ({ hour: i, messages: 0 }))
+    const dayMap: Record<string, number> = {}
+    for (let i = 13; i >= 0; i--) dayMap[new Date(now - i * 86400000).toISOString().slice(0, 10)] = 0
+
+    recentChats.forEach(c => {
+      const d = (c.createdAt ?? "").slice(0, 10)
+      if (dayMap[d] !== undefined) dayMap[d]++
+      const h = new Date(c.createdAt ?? "").getHours()
+      if (h >= 0 && h < 24) hourlyFromDB[h].messages++
+    })
+
+    const dailyActivity = Object.entries(dayMap).map(([date, conversations]) => ({ date, conversations }))
+
+    // Top queries from recent chat titles
+    const freq: Record<string, number> = {}
+    recentChats.forEach(c => {
+      const k = (c.title ?? "").trim().substring(0, 60)
+      if (k.length > 2) freq[k] = (freq[k] || 0) + 1
+    })
+    const topQueries = Object.entries(freq)
+      .map(([query, count]) => ({ query, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+
+    const totalConversations = recentChats.length
+    const subscriptionsByPlan = {
+      free:     Number(planCounts.free    ?? allUsers.filter(u => u.plan === "free").length),
+      starter:  Number(planCounts.startup ?? allUsers.filter(u => u.plan === "startup").length),
+      pro:      Number(planCounts.pro     ?? allUsers.filter(u => u.plan === "pro").length),
+      advanced: Number(planCounts.vip     ?? allUsers.filter(u => u.plan === "vip").length),
+    }
+    const totalSubscribers = Object.values(subscriptionsByPlan).reduce((a, b) => a + b, 0)
+
+    // 2. Vercel Analytics
+    const vercel = process.env.VERCEL_TOKEN
+      ? await fetchVercelAnalytics()
+      : { pageviews: 0, visitors: 0, hourlyActivity: [] as { hour: number; messages: number }[] }
+
+    const hourlyActivity = Array.from({ length: 24 }, (_, i) => ({
+      hour: i,
+      messages: (vercel.hourlyActivity[i]?.messages || 0) + (hourlyFromDB[i]?.messages || 0),
+    }))
+
+    return Response.json({
+      totalConversations,
+      totalMessages:      globalStats.totalMessages,
+      totalUsers:         totalUsers || globalStats.totalUsers,
+      activeUsersNow:     recentUsers24h,
+      activeUsers:        recentUsers24h,
+      pageviewsToday:     vercel.pageviews,
+      visitorsToday:      vercel.visitors,
+      messagesPerMinute:  Number((hourlyActivity[new Date().getHours()]?.messages / 60).toFixed(2)),
+      averageResponseTime: 0,
+      subscriptionsByPlan,
+      totalSubscribers,
+      featureUsage: {
+        textGeneration:  globalStats.totalMessages,
+        imageGeneration: globalStats.totalImages,
+        videoGeneration: globalStats.totalVideos,
+        deepSearch:      0,
+        ideaToPrompt:    0,
+        voiceCloning:    Math.round(globalStats.totalVoiceMinutes),
+      },
+      totalImages:        globalStats.totalImages,
+      totalVideos:        globalStats.totalVideos,
+      totalVoiceMinutes:  Math.round(globalStats.totalVoiceMinutes),
+      messagesToday:      hourlyFromDB.reduce((s, h) => s + h.messages, 0),
+      conversationsToday: recentUsers24h,
+      monthlyMessages:    globalStats.totalMessages,
+      monthlyImages:      globalStats.totalImages,
+      dailyActivity,
+      responseTypes:      { text: globalStats.totalMessages, search: 0, creative: 0, technical: 0 },
+      userSatisfaction:   { positive: 0, neutral: 0, negative: 0 },
+      systemHealth:       { apiResponseTime: 0, uptime: 99.9, errorRate: 0 },
+      topQueries,
+      hourlyActivity,
+      lastUpdated: new Date().toISOString(),
+    })
+  } catch (e: any) {
+    console.error("[analytics] error:", e.message)
+    return Response.json({ error: e.message }, { status: 500 })
   }
-  const totalSubscribers = Object.values(subscriptionsByPlan).reduce((a, b) => a + b, 0)
-
-  const lastHour = convStats.hourlyActivity[new Date().getHours()]?.messages ?? 0
-  const messagesPerMinute = Number((lastHour / 60).toFixed(2))
-
-  return Response.json({
-    totalConversations:  convStats.totalConversations,
-    totalMessages:       analytics.totalMessages || convStats.totalConversations,
-    totalUsers:          convStats.uniqueUsers,
-    activeUsersNow:      convStats.recentUsers24h,
-    activeUsers:         convStats.recentUsers24h,
-    pageviewsToday:      0,
-    visitorsToday:       convStats.recentUsers24h,
-    messagesPerMinute,
-    averageResponseTime: 0,
-    subscriptionsByPlan,
-    totalSubscribers,
-    featureUsage: {
-      textGeneration:  analytics.featureUsage?.textGeneration  ?? convStats.totalConversations,
-      imageGeneration: analytics.featureUsage?.imageGeneration ?? dailyStats.totalImages,
-      videoGeneration: analytics.featureUsage?.videoGeneration ?? dailyStats.totalVideos,
-      deepSearch:      analytics.featureUsage?.deepSearch      ?? 0,
-      ideaToPrompt:    analytics.featureUsage?.ideaToPrompt    ?? 0,
-      voiceCloning:    analytics.featureUsage?.voiceCloning    ?? Math.round(dailyStats.totalVoice),
-    },
-    totalImages:          analytics.totalImages || dailyStats.totalImages,
-    totalVideos:          analytics.totalVideos || dailyStats.totalVideos,
-    totalVoiceMinutes:    Math.round(analytics.totalVoiceMinutes || dailyStats.totalVoice),
-    messagesToday:        dailyStats.messagesToday,
-    conversationsToday:   convStats.recentUsers24h,
-    monthlyMessages:      analytics.totalMessages || 0,
-    monthlyImages:        analytics.totalImages    || 0,
-    dailyActivity:        [],
-    responseTypes:        { text: convStats.totalConversations, search: 0, creative: 0, technical: 0 },
-    userSatisfaction:     { positive: 0, neutral: 0, negative: 0 },
-    systemHealth:         { apiResponseTime: 0, uptime: 99.9, errorRate: 0 },
-    topQueries:           convStats.topQueries,
-    hourlyActivity:       convStats.hourlyActivity,
-    lastUpdated:          new Date().toISOString(),
-  })
 }

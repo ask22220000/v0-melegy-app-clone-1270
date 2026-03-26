@@ -8,19 +8,15 @@ import { PLAN_LIMITS } from "@/lib/usage-tracker"
 
 const FREE_VIDEO_LIMIT = PLAN_LIMITS.free.animatedVideosPerDay
 
-async function checkVideoLimit(userId: string): Promise<{ allowed: boolean; reason?: string }> {
+async function checkVideoLimit(ip: string): Promise<{ allowed: boolean; reason?: string }> {
   try {
-    const plan = await getEffectivePlan(userId)
-    const limits = PLAN_LIMITS[plan]
-    if (limits.animatedVideosPerDay === -1) return { allowed: true }
-
-    const usage = await getDailyUsage(userId, todayEgypt())
-    const used = usage.animated_videos ?? 0
-
-    if (used >= limits.animatedVideosPerDay) {
+    const plan = await getEffectivePlan(ip)
+    if (plan !== "free") return { allowed: true }
+    const usage = await getDailyUsage(ip, todayEgypt())
+    if (usage.animated_videos >= FREE_VIDEO_LIMIT) {
       return {
         allowed: false,
-        reason: `لقد وصلت للحد الأقصى (${limits.animatedVideosPerDay} فيديو/يوم) في خطة ${limits.name}. قم بالترقية للمزيد!`,
+        reason: `لقد وصلت للحد الأقصى (${FREE_VIDEO_LIMIT} فيديو/يوم) في الخطة المجانية. قم بالترقية للمزيد!`,
       }
     }
     return { allowed: true }

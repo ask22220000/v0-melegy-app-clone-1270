@@ -1,70 +1,76 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getConversations, updateConversationMessages, incrementAnalytics } from "@/lib/db"
+import { getConversations, updateConversationMessages } from "@/lib/db"
 
 export const runtime = "nodejs"
 
-/**
- * Messages are stored inline inside each conversation item in DynamoDB.
- * GET fetches a conversation's messages by user_id + conversation id.
- * POST appends a message to an existing conversation.
- */
-
-// GET /api/user/messages?user_id=mlg_xxx&conversation_id=xxx
+// GET /api/user/messages?conversation_id=CHAT%23...&user_id=mlg_xxx
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+    const conversationSK = searchParams.get("conversation_id")
     const userId = searchParams.get("user_id")
-    const conversationId = searchParams.get("conversation_id")
 
-    if (!userId || !conversationId) {
-      return NextResponse.json({ messages: [] })
+    if (!conversationSK || !userId) {
+      return NextResponse.json({ error: "Missing conversation_id or user_id" }, { status: 400 })
     }
 
-    const conversations = await getConversations(userId, 100)
-    const conv = conversations.find((c) => c.id === conversationId)
-    if (!conv) return NextResponse.json({ messages: [] })
+    const convs = await getConversations(userId, 200)
+    const match = convs.find((c) => c.SK === conversationSK || c.id === conversationSK)
 
-    return NextResponse.json({ messages: conv.messages ?? [] })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
-    console.error("[user/messages] GET error:", msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    if (!match) return NextResponse.json({ messages: [] })
+
+    const messages = (match.messages ?? []).map((m: any, i: number) => ({
+      id: String(i),
+      role: m.role,
+      content: m.content,
+      media_urls: m.imageUrl
+        ? [{ type: "image", url: m.imageUrl }]
+        : m.videoUrl
+        ? [{ type: "video", url: m.videoUrl }]
+        : [],
+      created_at: m.timestamp ? new Date(m.timestamp).toISOString() : new Date().toISOString(),
+    }))
+
+    return NextResponse.json({ messages })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
-// POST /api/user/messages — append message to conversation
+// POST /api/user/messages — append a message to a conversation
 export async function POST(request: NextRequest) {
   try {
-    const { conversation_sk, mlg_user_id, role, content, imageUrl, videoUrl } = await request.json()
+    const { conversation_id, mlg_user_id, role, content, imageUrl, videoUrl } = await request.json()
 
-    if (!conversation_sk || !mlg_user_id || !role || !content) {
+    if (!conversation_id || !mlg_user_id || !role || !content) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Fetch existing conversation
-    const conversations = await getConversations(mlg_user_id, 100)
-    const conv = conversations.find((c) => (c as any).SK === conversation_sk)
-    if (!conv) return NextResponse.json({ error: "Conversation not found" }, { status: 404 })
+    // Load existing messages
+    const convs = await getConversations(mlg_user_id, 200)
+    const match = convs.find((c) => c.SK === conversation_id || c.id === conversation_id)
 
+    const existingMessages: any[] = match?.messages ?? []
     const newMsg = {
-      role: role as "user" | "assistant",
+      role,
       content,
       timestamp: Date.now(),
       ...(imageUrl ? { imageUrl } : {}),
       ...(videoUrl ? { videoUrl } : {}),
     }
+    const updated = [...existingMessages, newMsg]
 
-    const updatedMessages = [...(conv.messages ?? []), newMsg]
-    await updateConversationMessages(mlg_user_id, conversation_sk, updatedMessages)
+    await updateConversationMessages(mlg_user_id, conversation_id, updated)
 
-    if (role === "user") {
-      incrementAnalytics("totalMessages").catch(() => {})
-    }
-
-    return NextResponse.json({ message: newMsg })
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
-    console.error("[user/messages] POST error:", msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return NextResponse.json({
+      message: {
+        id: String(updated.length - 1),
+        role,
+        content,
+        created_at: new Date().toISOString(),
+      },
+    })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
