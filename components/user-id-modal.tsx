@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Copy, Check, UserPlus, LogIn, Loader2 } from "lucide-react"
+import { Copy, Check, UserPlus, LogIn, Loader2, Smartphone, Apple, X, Share, MoreVertical, PlusSquare } from "lucide-react"
 
 interface UserIdModalProps {
   onUserReady: (userId: string, plan: string, isNew: boolean) => void
@@ -19,6 +19,31 @@ export function UserIdModal({ onUserReady }: UserIdModalProps) {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [showAppleGuide, setShowAppleGuide] = useState(false)
+  const [installed, setInstalled] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener("beforeinstallprompt", handler)
+    window.addEventListener("appinstalled", () => setInstalled(true))
+    return () => window.removeEventListener("beforeinstallprompt", handler)
+  }, [])
+
+  async function handleAndroidInstall() {
+    if (!deferredPrompt) {
+      // Fallback: open in Chrome if not supported
+      window.open(window.location.href, "_blank")
+      return
+    }
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    if (outcome === "accepted") setInstalled(true)
+    setDeferredPrompt(null)
+  }
 
   async function handleCreateNew() {
     setLoading(true)
@@ -125,6 +150,86 @@ export function UserIdModal({ onUserReady }: UserIdModalProps) {
             </Button>
 
             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+            {/* PWA Install Buttons */}
+            <div className="mt-2 border-t border-gray-800 pt-4 flex flex-col gap-2">
+              <p className="text-xs text-gray-500 text-center mb-1">حمّل الأداة على جهازك</p>
+              <div className="flex gap-2">
+                {/* Android */}
+                <button
+                  onClick={handleAndroidInstall}
+                  disabled={installed}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gray-900 border border-gray-700 hover:border-blue-600 hover:bg-gray-800 text-gray-300 text-sm font-medium rounded-xl py-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Smartphone className="w-4 h-4 text-blue-400" />
+                  {installed ? "تم التثبيت" : "تثبيت Android"}
+                </button>
+                {/* Apple */}
+                <button
+                  onClick={() => setShowAppleGuide(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-gray-900 border border-gray-700 hover:border-gray-500 hover:bg-gray-800 text-gray-300 text-sm font-medium rounded-xl py-3 transition-all"
+                >
+                  <Apple className="w-4 h-4 text-gray-400" />
+                  تثبيت iPhone
+                </button>
+              </div>
+            </div>
+
+            {/* Apple Guide Modal */}
+            {showAppleGuide && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm" dir="rtl">
+                <div className="bg-[#0d1117] border border-gray-700 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-2xl">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-bold text-lg">تثبيت على iPhone</h3>
+                    <button onClick={() => setShowAppleGuide(false)} className="text-gray-500 hover:text-white transition-colors">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">1</div>
+                      <div>
+                        <p className="text-white text-sm font-medium">افتح الموقع في Safari</p>
+                        <p className="text-gray-400 text-xs mt-0.5">التثبيت بيشتغل من Safari بس على iPhone</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">2</div>
+                      <div className="flex items-start gap-2">
+                        <div>
+                          <p className="text-white text-sm font-medium">اضغط زر المشاركة</p>
+                          <p className="text-gray-400 text-xs mt-0.5">الزرار ده في أسفل الشاشة</p>
+                        </div>
+                        <Share className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">3</div>
+                      <div className="flex items-start gap-2">
+                        <div>
+                          <p className="text-white text-sm font-medium">اختار "أضف إلى الشاشة الرئيسية"</p>
+                          <p className="text-gray-400 text-xs mt-0.5">Add to Home Screen</p>
+                        </div>
+                        <PlusSquare className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">4</div>
+                      <div>
+                        <p className="text-white text-sm font-medium">اضغط "إضافة"</p>
+                        <p className="text-gray-400 text-xs mt-0.5">الأداة هتتثبت على شاشتك زي أي تطبيق</p>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAppleGuide(false)}
+                    className="w-full mt-5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl py-3 text-sm font-medium transition-colors"
+                  >
+                    فهمت، شكراً
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
