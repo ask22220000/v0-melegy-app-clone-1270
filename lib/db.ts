@@ -213,15 +213,24 @@ export async function getUserMeta(userId: string): Promise<UserMeta | null> {
   } catch { return null }
 }
 
-export async function ensureUserMeta(userId: string): Promise<void> {
+export async function ensureUserMeta(userId: string): Promise<UserMeta> {
   const existing = await getUserMeta(userId)
-  if (existing) return
+  if (existing) return existing
   const now = new Date().toISOString()
+  const newMeta: UserMeta = {
+    userId,
+    plan:          "free",
+    planExpiresAt: null,
+    theme:         "dark",
+    createdAt:     now,
+    updatedAt:     now,
+  }
   await dynamoRequest("PutItem", {
     TableName:           TABLE,
-    Item:                marshal({ PK: `USER#${userId}`, SK: "META", userId, plan: "free", planExpiresAt: null, theme: "dark", createdAt: now, updatedAt: now }),
+    Item:                marshal({ PK: `USER#${userId}`, SK: "META", ...newMeta }),
     ConditionExpression: "attribute_not_exists(PK)",
   }).catch(() => {})
+  return newMeta
 }
 
 export async function upsertUserMeta(userId: string, fields: Partial<UserMeta & Record<string,any>>): Promise<void> {
