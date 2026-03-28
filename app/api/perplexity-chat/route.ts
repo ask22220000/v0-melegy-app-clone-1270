@@ -59,17 +59,28 @@ export async function POST(request: NextRequest) {
 
     const model = getModel("gemini-2.0-flash")
 
-    // Build history for Gemini chat
+    // Build history for Gemini chat - must start with 'user' and alternate user/model
     const history: { role: string; parts: { text: string }[] }[] = []
     if (conversationHistory.length > 0) {
-      const recent = conversationHistory.slice(-6)
-      for (const msg of recent) {
-        if (msg.role === "user" || msg.role === "assistant") {
-          history.push({
-            role: msg.role === "assistant" ? "model" : "user",
-            parts: [{ text: typeof msg.content === "string" ? msg.content.substring(0, 500) : "" }],
-          })
-        }
+      const recent = conversationHistory.slice(-10)
+      const filtered = recent.filter(
+        (msg: any) => (msg.role === "user" || msg.role === "assistant") &&
+          typeof msg.content === "string" && msg.content.trim().length > 0
+      )
+      // Ensure history starts with 'user'
+      let startIdx = 0
+      while (startIdx < filtered.length && filtered[startIdx].role !== "user") startIdx++
+      for (let i = startIdx; i < filtered.length; i++) {
+        const msg = filtered[i]
+        const expectedRole = (history.length % 2 === 0) ? "user" : "model"
+        const msgRole = msg.role === "assistant" ? "model" : "user"
+        if (msgRole !== expectedRole) continue // skip out-of-order messages
+        history.push({ role: msgRole, parts: [{ text: msg.content.substring(0, 800) }] })
+      }
+      // History must end with 'model' (not 'user'), since we're about to send the new user message
+      // If it ends with 'user', pop it to avoid double-user
+      if (history.length > 0 && history[history.length - 1].role === "user") {
+        history.pop()
       }
     }
 
