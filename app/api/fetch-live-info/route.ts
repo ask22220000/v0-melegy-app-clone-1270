@@ -1,4 +1,4 @@
-import { generateText } from 'ai'
+import { generateWithFalRouter } from "@/lib/falRouterService"
 
 export async function POST(request: Request) {
   try {
@@ -11,26 +11,25 @@ export async function POST(request: Request) {
       )
     }
 
-    // Step 1: Get fresh information from Perplexity/Sonar
-    const perplexityResult = await generateText({
-      model: 'perplexity/sonar',
-      prompt: query,
-      maxOutputTokens: 2048,
-    })
+    // Step 1: Get fresh information using Fal OpenRouter
+    const searchResult = await generateWithFalRouter(
+      "You are a helpful assistant that provides accurate, up-to-date information. Search for the latest information and provide comprehensive answers.",
+      [{ role: "user", content: query }],
+      { maxTokens: 2048, temperature: 0.7 }
+    )
 
-    // Step 2: Pass the information to Gemini for polished response
-    const geminiResult = await generateText({
-      model: 'google/gemini-2-flash',
-      system: `You are a helpful assistant responding to users in Arabic with a friendly and professional tone. 
+    // Step 2: Polish the response in Arabic using Fal OpenRouter
+    const polishedResult = await generateWithFalRouter(
+      `You are a helpful assistant responding to users in Arabic with a friendly and professional tone. 
       Take the provided information and respond naturally to the user's original question.
       Be conversational, helpful, and accurate.`,
-      prompt: `المعلومات المحدثة: ${perplexityResult.text}\n\nالسؤال الأصلي: ${query}\n\nالرجاء الرد على السؤال بناءً على المعلومات المحدثة أعلاه:`,
-      maxOutputTokens: 1024,
-    })
+      [{ role: "user", content: `المعلومات المحدثة: ${searchResult}\n\nالسؤال الأصلي: ${query}\n\nالرجاء الرد على السؤال بناءً على المعلومات المحدثة أعلاه:` }],
+      { maxTokens: 1024, temperature: 0.7 }
+    )
 
     return Response.json({
       success: true,
-      content: geminiResult.text,
+      content: polishedResult,
       query: query,
       timestamp: new Date().toISOString(),
     })

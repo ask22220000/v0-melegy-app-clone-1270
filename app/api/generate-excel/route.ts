@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { generateText } from "ai"
+import { generateWithFalRouter } from "@/lib/falRouterService"
 
 export async function POST(req: Request) {
   try {
@@ -46,18 +46,14 @@ async function generateExcelDataWithAI(
 
 لا تكتب أي شيء قبل أو بعد الـ JSON.`
 
-    const model = needsWebSearch ? "perplexity/sonar" : "google/gemini-3-flash"
-
-    const result = await generateText({
-      model,
-      system: systemPrompt,
-      messages: [{ role: "user", content: prompt }],
-      maxTokens: 4000,
-      temperature: 0.3,
-    })
+    const result = await generateWithFalRouter(
+      systemPrompt,
+      [{ role: "user", content: prompt }],
+      { maxTokens: 4000, temperature: 0.3 }
+    )
 
     // Extract JSON from response
-    let jsonText = result.text.trim()
+    let jsonText = result.trim()
     
     // Remove markdown code blocks if present
     jsonText = jsonText.replace(/```json\s*/g, "").replace(/```\s*/g, "")

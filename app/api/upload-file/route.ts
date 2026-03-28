@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
+import { generateWithFalRouter, generateWithFalRouterVision } from "@/lib/falRouterService"
 import pdfParse from "pdf-parse"
 import mammoth from "mammoth"
 import * as XLSX from "xlsx"
@@ -48,52 +48,35 @@ export async function POST(req: NextRequest) {
       extractedContent = sheets.join("\n")
     }
     else if (fileType.startsWith("image/")) {
-      // For images, use Gemini Vision
+      // For images, use Fal OpenRouter Vision
       const base64Image = Buffer.from(await file.arrayBuffer()).toString("base64")
       const dataUrl = `data:${fileType};base64,${base64Image}`
 
-      const result = await generateText({
-        model: "google/gemini-3-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userPrompt },
-              { type: "image", image: dataUrl }
-            ]
-          }
-        ],
-        maxTokens: 2000,
-      })
+      const result = await generateWithFalRouterVision(
+        "أنت مساعد ذكي متخصص في تحليل الصور. تتحدث بالعربية المصرية بشكل ودود واحترافي.",
+        userPrompt,
+        dataUrl,
+        { maxTokens: 2000 }
+      )
 
       return NextResponse.json({
         success: true,
-        content: result.text,
+        content: result,
         fileType: "image",
         fileName,
       })
     }
     else if (fileType.startsWith("audio/")) {
-      // For audio files (MP3), use Gemini audio transcription
-      const base64Audio = Buffer.from(await file.arrayBuffer()).toString("base64")
-      const dataUrl = `data:${fileType};base64,${base64Audio}`
-
-      const result = await generateText({
-        model: "google/gemini-3-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "قم بتفريغ هذا الملف الصوتي وتحويله إلى نص مكتوب بدقة" },
-            ]
-          }
-        ],
-        maxTokens: 2000,
-      })
+      // For audio files (MP3), use Fal OpenRouter for transcription
+      const result = await generateWithFalRouter(
+        "أنت مساعد ذكي متخصص في تفريغ الملفات الصوتية. تتحدث بالعربية المصرية بشكل ودود واحترافي.",
+        [{ role: "user", content: "قم بتفريغ هذا الملف الصوتي وتحويله إلى نص مكتوب بدقة" }],
+        { maxTokens: 2000 }
+      )
 
       return NextResponse.json({
         success: true,
-        content: result.text,
+        content: result,
         fileType: "audio",
         fileName,
       })
@@ -104,26 +87,17 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Process extracted text content with Gemini
+    // Process extracted text content with Fal OpenRouter
     if (extractedContent) {
-      const result = await generateText({
-        model: "google/gemini-3-flash",
-        messages: [
-          {
-            role: "system",
-            content: "أنت مساعد ذكي متخصص في معالجة وتحليل المستندات. تتحدث بالعربية المصرية بشكل ودود واحترافي."
-          },
-          {
-            role: "user",
-            content: `${userPrompt}\n\nمحتوى الملف (${fileName}):\n\n${extractedContent}`
-          }
-        ],
-        maxTokens: 2000,
-      })
+      const result = await generateWithFalRouter(
+        "أنت مساعد ذكي متخصص في معالجة وتحليل المستندات. تتحدث بالعربية المصرية بشكل ودود واحترافي.",
+        [{ role: "user", content: `${userPrompt}\n\nمحتوى الملف (${fileName}):\n\n${extractedContent}` }],
+        { maxTokens: 2000 }
+      )
 
       return NextResponse.json({
         success: true,
-        content: result.text,
+        content: result,
         extractedText: extractedContent.substring(0, 1000), // First 1000 chars for preview
         fileType,
         fileName,
