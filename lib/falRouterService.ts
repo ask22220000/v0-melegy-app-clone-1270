@@ -1,8 +1,13 @@
 import * as fal from "@fal-ai/serverless-client"
 
-// Configure fal client
+// Configure fal client - ensure FAL_KEY is set
+const FAL_KEY = process.env.FAL_KEY
+if (!FAL_KEY) {
+  console.error("[FalRouter] FAL_KEY environment variable is not set!")
+}
+
 fal.config({
-  credentials: process.env.FAL_KEY,
+  credentials: FAL_KEY || "",
 })
 
 interface Message {
@@ -35,9 +40,14 @@ export async function generateWithFalRouter(
     model?: string
   } = {}
 ): Promise<string> {
-  const { maxTokens = 500, temperature = 0.7, model = "google/gemini-2.5-flash" } = options
+  const { maxTokens = 500, temperature = 0.7, model = "google/gemini-2.0-flash-001" } = options
 
   try {
+    // Check if FAL_KEY is available
+    if (!FAL_KEY) {
+      throw new Error("FAL_KEY environment variable is not configured")
+    }
+
     // Build the prompt from messages
     let prompt = ""
     for (const msg of messages) {
@@ -50,8 +60,9 @@ export async function generateWithFalRouter(
     prompt = prompt.trim()
 
     console.log(`[FalRouter] Sending request to model: ${model}`)
+    console.log(`[FalRouter] FAL_KEY exists: ${!!FAL_KEY}`)
 
-    const result = await fal.subscribe("openrouter/router", {
+    const result = await fal.subscribe("fal-ai/any-llm", {
       input: {
         model,
         prompt,
@@ -71,7 +82,8 @@ export async function generateWithFalRouter(
     return responseText
   } catch (error: any) {
     console.error("[FalRouter] Error:", error.message)
-    throw error
+    // Return a friendly error message instead of throwing
+    return "عذراً، حصل خطأ في الاتصال. جرب تاني بعد شوية."
   }
 }
 
@@ -88,15 +100,20 @@ export async function generateWithFalRouterVision(
     model?: string
   } = {}
 ): Promise<string> {
-  const { maxTokens = 500, temperature = 0.7, model = "google/gemini-2.5-flash" } = options
+  const { maxTokens = 500, temperature = 0.7, model = "google/gemini-2.0-flash-001" } = options
 
   try {
+    // Check if FAL_KEY is available
+    if (!FAL_KEY) {
+      throw new Error("FAL_KEY environment variable is not configured")
+    }
+
     // For vision, include image URL in the prompt
     const prompt = `${userPrompt}\n\n[صورة: ${imageUrl}]`
 
     console.log(`[FalRouter Vision] Analyzing image with model: ${model}`)
 
-    const result = await fal.subscribe("openrouter/router", {
+    const result = await fal.subscribe("fal-ai/any-llm", {
       input: {
         model,
         prompt,
@@ -116,7 +133,7 @@ export async function generateWithFalRouterVision(
     return responseText
   } catch (error: any) {
     console.error("[FalRouter Vision] Error:", error.message)
-    throw error
+    return "عذراً، حصل خطأ في تحليل الصورة. جرب تاني."
   }
 }
 
