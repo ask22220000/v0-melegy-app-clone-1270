@@ -1,4 +1,4 @@
-import { generateText } from "ai"
+import { generateWithFalRouter } from "@/lib/falRouterService"
 
 export const runtime = "nodejs"
 export const maxDuration = 30
@@ -51,19 +51,17 @@ export async function POST(request: Request) {
     const systemWithDate = `التاريخ والوقت الحالي بالقاهرة: ${currentDateTime}. استخدم دي دايماً لأسئلة الوقت والتاريخ.\n\n${VOICE_SYSTEM_PROMPT}`
 
     // Build messages array — keep last 8 turns for better context
-    const messages: { role: "user" | "assistant"; content: string }[] = [
+    const messages: { role: "user" | "assistant" | "system"; content: string }[] = [
       ...(history || []).slice(-8),
       { role: "user", content: text },
     ]
 
-    // perplexity/sonar — fast, natural, has live web search built-in
-    const { text: rawReply } = await generateText({
-      model: "perplexity/sonar",
-      system: systemWithDate,
+    // Using Fal OpenRouter for fast, natural responses
+    const rawReply = await generateWithFalRouter(
+      systemWithDate,
       messages,
-      maxOutputTokens: 200,
-      temperature: 0.75,
-    })
+      { maxTokens: 200, temperature: 0.75 }
+    )
 
     // Strip any markdown, citations, or formatting that doesn't belong in voice output
     const reply = rawReply

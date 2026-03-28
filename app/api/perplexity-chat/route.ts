@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
-import * as fal from "@fal-ai/serverless-client"
+import { generateWithFalRouter, generateWithFalRouterVision } from "@/lib/falRouterService"
 
 const EGYPTIAN_SYSTEM_PROMPT = `أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! 🎉 طورتك Vision AI Studio المصرية.
 
@@ -58,24 +57,16 @@ export async function POST(request: NextRequest) {
     const needsWebSearch = !isDateTimeQuestion &&
       /متى|إمتى|when|حدث|أخبار|news|الآن|now|حالياً|currently|recent|مقارنة|compare|سعر|price|معلومات عن|information about/.test(userPrompt.toLowerCase())
 
-    // Analyze image with Gemini vision if available
+    // Analyze image with Fal OpenRouter vision if available
     let imageAnalysisContext = ""
     if (imageUrl) {
       try {
-        const visionResult = await generateText({
-          model: "google/gemini-3-flash",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: userPrompt || "اوصف الصورة دي بالتفصيل" },
-                { type: "image", image: imageUrl }
-              ]
-            }
-          ],
-          maxTokens: 300,
-        })
-        imageAnalysisContext = visionResult.text
+        imageAnalysisContext = await generateWithFalRouterVision(
+          "اوصف الصورة بالتفصيل بالعربية",
+          userPrompt || "اوصف الصورة دي بالتفصيل",
+          imageUrl,
+          { maxTokens: 300, model: "google/gemini-2.0-flash-001" }
+        )
       } catch (e: any) {
         console.error("[API] Image analysis error:", e.message)
       }
@@ -122,21 +113,16 @@ export async function POST(request: NextRequest) {
 
     const systemWithDateTime = EGYPTIAN_SYSTEM_PROMPT + dateTimeContext
 
-    // Choose model based on search needs
-    const modelToUse = needsWebSearch ? "perplexity/sonar" : "google/gemini-3-flash"
+    console.log(`[API] Using Fal OpenRouter for query: ${userPrompt.substring(0, 50)}`)
 
-    console.log(`[API] Using model: ${modelToUse} for query: ${userPrompt.substring(0, 50)}`)
-
-    // Generate response
-    const result = await generateText({
-      model: modelToUse,
-      system: systemWithDateTime,
+    // Generate response using Fal OpenRouter
+    const result = await generateWithFalRouter(
+      systemWithDateTime,
       messages,
-      maxTokens: 600,
-      temperature: 0.7,
-    })
+      { maxTokens: 600, temperature: 0.7 }
+    )
 
-    const cleanedText = result.text
+    const cleanedText = result
       .replace(/\*\*/g, "")
       .replace(/\[\d+\]/g, "")
       .trim()

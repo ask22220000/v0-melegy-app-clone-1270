@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
+import { generateWithFalRouterVision } from "@/lib/falRouterService"
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,23 +23,13 @@ export async function POST(request: NextRequest) {
 اذكر كل التفاصيل المرئية بدقة: الألوان، الخلفية، الإضاءة، الزوايا، الجو العام.${userPrompt !== "وصفلي الصورة دي بالتفصيل" ? `\n\nالمستخدم عايز يعرف: ${userPrompt}` : ""}`
 
     try {
-      // Use Google Gemini 3 Flash with vision capability from Vercel AI Gateway
-      const result = await generateText({
-        model: "google/gemini-3-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: analysisPrompt },
-              { type: "image", image: imageUrl }
-            ]
-          }
-        ],
-        maxTokens: 2048,
-        temperature: 0.7,
-      })
-
-      const raw = result.text
+      // Use Fal OpenRouter with vision capability
+      const raw = await generateWithFalRouterVision(
+        "أنت مساعد ذكي متخصص في تحليل ووصف الصور بدقة عالية.",
+        analysisPrompt,
+        imageUrl,
+        { maxTokens: 2048, temperature: 0.7 }
+      )
 
       // Strip all markdown formatting: bold/italic asterisks, hashes, backticks, bullet dashes
       const description = raw
