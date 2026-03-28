@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai"
 
-const apiKey = process.env.GEMINI_API_KEY!
+const apiKey = process.env.GEMINI_API_KEY || "AIzaSyBsA63VeNfMFFZO1WXuhNVYqwEzDK7VYMI"
 
 export const genAI = new GoogleGenerativeAI(apiKey)
 
@@ -15,7 +15,7 @@ export function getModel(modelName = "gemini-2.0-flash", systemInstruction?: str
   return genAI.getGenerativeModel({
     model: modelName,
     safetySettings,
-    ...(systemInstruction ? { systemInstruction: { role: "system", parts: [{ text: systemInstruction }] } } : {}),
+    ...(systemInstruction ? { systemInstruction } : {}),
   })
 }
 
