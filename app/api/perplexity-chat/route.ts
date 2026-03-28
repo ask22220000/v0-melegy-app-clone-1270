@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       ? `\n\n**التاريخ والوقت الحالي من جهاز المستخدم:** ${clientDateTime}\nاستخدم هذا التاريخ والوقت دايماً لما حد يسأل عن التاريخ أو الوقت.`
       : ""
 
-    const systemInstruction = EGYPTIAN_SYSTEM_PROMPT + dateTimeContext
+    const systemInstruction = { parts: [{ text: EGYPTIAN_SYSTEM_PROMPT + dateTimeContext }] }
 
     const model = getModel("gemini-2.0-flash")
 

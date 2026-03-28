@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       minute: "2-digit",
     })
 
-    const systemInstruction = `التاريخ والوقت الحالي بالقاهرة: ${currentDateTime}. استخدم دي دايماً لأسئلة الوقت والتاريخ.\n\n${VOICE_SYSTEM_PROMPT}`
+    const systemInstruction = { parts: [{ text: `التاريخ والوقت الحالي بالقاهرة: ${currentDateTime}. استخدم دي دايماً لأسئلة الوقت والتاريخ.\n\n${VOICE_SYSTEM_PROMPT}` }] }
 
     const model = getModel("gemini-2.0-flash")
 

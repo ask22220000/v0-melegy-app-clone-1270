@@ -44,7 +44,7 @@ async function generateExcelDataWithAI(
 
   const model = getModel("gemini-2.0-flash")
   const result = await model.generateContent({
-    systemInstruction: systemPrompt,
+    systemInstruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { maxOutputTokens: 4000, temperature: 0.3 },
   })

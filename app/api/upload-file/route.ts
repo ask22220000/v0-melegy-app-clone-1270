@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       const imagePart = { inlineData: { mimeType: fileType, data: base64 } }
 
       const result = await model.generateContent({
-        systemInstruction: "أنت مساعد ذكي متخصص في معالجة وتحليل المستندات. تتحدث بالعربية المصرية بشكل ودود واحترافي.",
+        systemInstruction: { parts: [{ text: "أنت مساعد ذكي متخصص في معالجة وتحليل المستندات. تتحدث بالعربية المصرية بشكل ودود واحترافي." }] },
         contents: [{ role: "user", parts: [{ text: userPrompt }, imagePart] }],
         generationConfig: { maxOutputTokens: 2000 },
       })
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await model.generateContent({
-      systemInstruction: "أنت مساعد ذكي متخصص في معالجة وتحليل المستندات. تتحدث بالعربية المصرية بشكل ودود واحترافي.",
+      systemInstruction: { parts: [{ text: "أنت مساعد ذكي متخصص في معالجة وتحليل المستندات. تتحدث بالعربية المصرية بشكل ودود واحترافي." }] },
       contents: [{
         role: "user",
         parts: [{ text: `${userPrompt}\n\nمحتوى الملف (${fileName}):\n\n${extractedContent}` }],

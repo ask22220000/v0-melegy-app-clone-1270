@@ -3,9 +3,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  turbopack: {
-    root: '/vercel/share/v0-project',
-  },
   images: {
     unoptimized: true,
   },
