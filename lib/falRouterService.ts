@@ -10,23 +10,16 @@ interface Message {
   content: string
 }
 
-interface FalRouterInput {
-  model?: string
-  messages: Array<{
-    role: string
-    content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>
-  }>
-  max_tokens?: number
-  temperature?: number
-}
-
 interface FalRouterOutput {
-  choices: Array<{
-    message: {
-      content: string
-      role: string
-    }
-  }>
+  output: string
+  reasoning?: string
+  usage?: {
+    prompt_tokens: number
+    total_tokens: number
+    completion_tokens: number
+    cost: number
+  }
+  error?: string
 }
 
 /**
@@ -42,30 +35,37 @@ export async function generateWithFalRouter(
     model?: string
   } = {}
 ): Promise<string> {
-  const { maxTokens = 500, temperature = 0.7, model = "google/gemini-2.0-flash-001" } = options
+  const { maxTokens = 500, temperature = 0.7, model = "google/gemini-2.5-flash" } = options
 
   try {
-    // Build messages array for OpenRouter format
-    const formattedMessages: FalRouterInput["messages"] = [
-      { role: "system", content: systemPrompt },
-      ...messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-    ]
+    // Build the prompt from messages
+    let prompt = ""
+    for (const msg of messages) {
+      if (msg.role === "user") {
+        prompt += msg.content + "\n"
+      } else if (msg.role === "assistant") {
+        prompt += `المساعد: ${msg.content}\n`
+      }
+    }
+    prompt = prompt.trim()
 
-    console.log(`[FalRouter] Sending request with ${formattedMessages.length} messages to model: ${model}`)
+    console.log(`[FalRouter] Sending request to model: ${model}`)
 
     const result = await fal.subscribe("openrouter/router", {
       input: {
         model,
-        messages: formattedMessages,
+        prompt,
+        system_prompt: systemPrompt,
         max_tokens: maxTokens,
         temperature,
       },
     }) as FalRouterOutput
 
-    const responseText = result.choices?.[0]?.message?.content || ""
+    if (result.error) {
+      throw new Error(result.error)
+    }
+
+    const responseText = result.output || ""
     console.log("[FalRouter] Response received successfully")
 
     return responseText
@@ -88,32 +88,29 @@ export async function generateWithFalRouterVision(
     model?: string
   } = {}
 ): Promise<string> {
-  const { maxTokens = 500, temperature = 0.7, model = "google/gemini-2.0-flash-001" } = options
+  const { maxTokens = 500, temperature = 0.7, model = "google/gemini-2.5-flash" } = options
 
   try {
-    const formattedMessages: FalRouterInput["messages"] = [
-      { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: userPrompt },
-          { type: "image_url", image_url: { url: imageUrl } },
-        ],
-      },
-    ]
+    // For vision, include image URL in the prompt
+    const prompt = `${userPrompt}\n\n[صورة: ${imageUrl}]`
 
     console.log(`[FalRouter Vision] Analyzing image with model: ${model}`)
 
     const result = await fal.subscribe("openrouter/router", {
       input: {
         model,
-        messages: formattedMessages,
+        prompt,
+        system_prompt: systemPrompt,
         max_tokens: maxTokens,
         temperature,
       },
     }) as FalRouterOutput
 
-    const responseText = result.choices?.[0]?.message?.content || ""
+    if (result.error) {
+      throw new Error(result.error)
+    }
+
+    const responseText = result.output || ""
     console.log("[FalRouter Vision] Response received successfully")
 
     return responseText
