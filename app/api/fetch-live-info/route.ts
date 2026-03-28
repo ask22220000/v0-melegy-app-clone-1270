@@ -1,4 +1,4 @@
-import { getModel } from "@/lib/gemini"
+import { falChat } from "@/lib/fal-chat"
 
 export async function POST(request: Request) {
   try {
@@ -8,21 +8,18 @@ export async function POST(request: Request) {
       return Response.json({ error: "Query is required" }, { status: 400 })
     }
 
-    const model = getModel("gemini-2.0-flash")
+    const systemPrompt = `You are a helpful assistant responding to users in Arabic with a friendly and professional tone. Be conversational, helpful, and accurate. Use Egyptian Arabic when possible.`
 
-    const result = await model.generateContent({
-      systemInstruction: `You are a helpful assistant responding to users in Arabic with a friendly and professional tone.
-      Be conversational, helpful, and accurate. Use Egyptian Arabic when possible.`,
-      contents: [{
-        role: "user",
-        parts: [{ text: query }],
-      }],
-      generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
+    const content = await falChat(query, [], {
+      model: "google/gemini-2.0-flash",
+      systemPrompt,
+      maxTokens: 1024,
+      temperature: 0.7,
     })
 
     return Response.json({
       success: true,
-      content: result.response.text(),
+      content,
       query,
       timestamp: new Date().toISOString(),
     })

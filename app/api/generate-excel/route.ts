@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getModel } from "@/lib/gemini"
+import { falChat } from "@/lib/fal-chat"
 
 export async function POST(req: Request) {
   try {
@@ -37,20 +37,19 @@ async function generateExcelDataWithAI(
 5. اجعل الأعمدة واضحة ومنطقية
 6. أضف 10-30 صف على الأقل من البيانات الحقيقية
 
-**يجب أن يكون الرد JSON فقط بهذا الشكل:**
+يجب أن يكون الرد JSON فقط بهذا الشكل:
 {"headers": ["العمود1", "العمود2", "العمود3"], "rows": [["قيمة1", "قيمة2", "قيمة3"], ["قيمة4", "قيمة5", "قيمة6"]]}
 
 لا تكتب أي شيء قبل أو بعد الـ JSON.`
 
-  const model = getModel("gemini-2.0-flash")
-  const result = await model.generateContent({
-    systemInstruction: systemPrompt,
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: { maxOutputTokens: 4000, temperature: 0.3 },
+  const text = await falChat(prompt, [], {
+    model: "google/gemini-2.0-flash",
+    systemPrompt,
+    maxTokens: 4000,
+    temperature: 0.3,
   })
 
-  let jsonText = result.response.text().trim()
-  jsonText = jsonText.replace(/```json\s*/g, "").replace(/```\s*/g, "")
+  let jsonText = text.trim().replace(/```json\s*/g, "").replace(/```\s*/g, "")
 
   const jsonMatch = jsonText.match(/\{[\s\S]*?"headers"[\s\S]*?"rows"[\s\S]*?\}/s)
   if (jsonMatch) {

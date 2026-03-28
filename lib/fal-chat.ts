@@ -1,0 +1,56 @@
+import { fal } from "@fal-ai/client"
+
+// Configure fal client with API key
+fal.config({ credentials: process.env.FAL_KEY! })
+
+export interface FalChatOptions {
+  model?: string
+  systemPrompt?: string
+  maxTokens?: number
+  temperature?: number
+}
+
+/**
+ * Call Fal OpenRouter for text generation.
+ * Builds a single prompt string from conversation history + current message.
+ */
+export async function falChat(
+  userMessage: string,
+  history: { role: "user" | "assistant"; content: string }[] = [],
+  options: FalChatOptions = {}
+): Promise<string> {
+  const {
+    model = "google/gemini-2.0-flash",
+    systemPrompt,
+    maxTokens = 600,
+    temperature = 0.7,
+  } = options
+
+  // Build a conversation string from history so the model has context
+  let conversationContext = ""
+  if (history.length > 0) {
+    const recent = history.slice(-8)
+    conversationContext = recent
+      .map((m) => {
+        const role = m.role === "assistant" ? "ميليجي" : "المستخدم"
+        return `${role}: ${m.content}`
+      })
+      .join("\n")
+    conversationContext += "\n"
+  }
+
+  const fullPrompt = conversationContext + `المستخدم: ${userMessage}\nميليجي:`
+
+  const result = await fal.subscribe("openrouter/router", {
+    input: {
+      model,
+      prompt: fullPrompt,
+      ...(systemPrompt ? { system_prompt: systemPrompt } : {}),
+      max_tokens: maxTokens,
+      temperature,
+    },
+  })
+
+  const data = result.data as any
+  return (data?.output || "").trim()
+}
