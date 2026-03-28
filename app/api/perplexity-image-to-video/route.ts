@@ -1,5 +1,27 @@
 import * as fal from "@fal-ai/serverless-client"
 import { NextResponse } from "next/server"
+import { headers } from "next/headers"
+import { getDailyUsage, getEffectivePlan, todayEgypt } from "@/lib/db"
+import { PLAN_LIMITS } from "@/lib/usage-tracker"
+
+const FREE_VIDEO_LIMIT = PLAN_LIMITS.free.animatedVideosPerDay
+
+async function checkVideoLimit(ip: string): Promise<{ allowed: boolean; reason?: string }> {
+  try {
+    const plan = await getEffectivePlan(ip)
+    if (plan !== "free") return { allowed: true }
+    const usage = await getDailyUsage(ip, todayEgypt())
+    if (usage.animated_videos >= FREE_VIDEO_LIMIT) {
+      return {
+        allowed: false,
+        reason: `لقد وصلت للحد الأقصى (${FREE_VIDEO_LIMIT} فيديو/يوم) في الخطة المجانية. قم بالترقية للمزيد!`,
+      }
+    }
+    return { allowed: true }
+  } catch {
+    return { allowed: true }
+  }
+}
 
 function enhanceArabicPrompt(prompt: string): string {
   const arabicToEnglish: Record<string, string> = {
@@ -30,6 +52,17 @@ function enhanceArabicPrompt(prompt: string): string {
 
 export async function POST(req: Request) {
   try {
+    const headersList = await headers()
+    const ip =
+      (headersList.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
+      headersList.get("x-real-ip") ||
+      "unknown"
+
+    const limitCheck = await checkVideoLimit(ip)
+    if (!limitCheck.allowed) {
+      return NextResponse.json({ error: limitCheck.reason }, { status: 429 })
+    }
+
     const { imageUrl, prompt } = await req.json()
 
     if (!imageUrl) {

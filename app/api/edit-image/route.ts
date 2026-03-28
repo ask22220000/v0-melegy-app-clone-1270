@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     const translatedPrompt = await translateWithPerplexity(prompt)
     console.log("[v0] 2. Translated edit prompt:", translatedPrompt)
 
-    const enhancedPrompt = `${translatedPrompt}. ${IMAGE_EDIT_QUALITY_CONSTANTS}`
+    const enhancedPrompt = `${translatedPrompt}, high quality, detailed, professional. ${IMAGE_EDIT_QUALITY_CONSTANTS}`
     console.log("[v0] 3. Enhanced edit prompt:", enhancedPrompt)
 
     let editedImageUrl: string | undefined
@@ -115,15 +115,15 @@ export async function POST(request: NextRequest) {
         credentials: process.env.FAL_KEY,
       })
 
-      console.log("[v0] 4. Editing image with fal-ai/flux-2-flex/edit...")
+      console.log("[v0] 4. Editing image with fal-ai/nano-banana/edit...")
 
-      const result = (await fal.subscribe("fal-ai/flux-2-flex/edit", {
+      const result = (await fal.subscribe("fal-ai/nano-banana/edit", {
         input: {
           prompt: enhancedPrompt,
           image_urls: [imageUrl],
-          num_inference_steps: 45,
-          guidance_scale: 8.5,
           num_images: 1,
+          output_format: "png",
+          safety_tolerance: "4",
         },
       })) as { images?: { url: string }[] }
 

@@ -1,90 +1,32 @@
 import { generateText } from "ai"
 
+export const runtime = "nodejs"
 export const maxDuration = 30
 
-// Convert Western digits to Egyptian Arabic words for natural TTS pronunciation
-function numbersToArabicWords(text: string): string {
-  const ones = ["", "واحد", "اتنين", "تلاتة", "أربعة", "خمسة", "ستة", "سبعة", "تمانية", "تسعة"]
-  const tens = ["", "عشرة", "عشرين", "تلاتين", "أربعين", "خمسين", "ستين", "سبعين", "تمانين", "تسعين"]
-  const hundreds = ["", "مية", "ميتين", "تلتمية", "أربعمية", "خمسمية", "ستمية", "سبعمية", "تمانمية", "تسعمية"]
+const VOICE_SYSTEM_PROMPT = `أنت ميليجي، صاحب المستخدم المصري الودود. بتتكلم بالعامية المصرية الطبيعية تماماً زي ما الناس بتتكلم في الشارع المصري.
 
-  function convertBelow1000(n: number): string {
-    if (n === 0) return ""
-    if (n === 11) return "حداشر"
-    if (n === 12) return "اتناشر"
-    if (n >= 13 && n <= 19) return ones[n - 10] + "تاشر"
-    if (n === 1000) return "ألف"
-    const h = Math.floor(n / 100)
-    const remainder = n % 100
-    const t = Math.floor(remainder / 10)
-    const o = remainder % 10
-    const parts: string[] = []
-    if (h > 0) parts.push(hundreds[h])
-    if (t > 0 && o > 0) parts.push(ones[o] + " و" + tens[t])
-    else if (t > 0) parts.push(tens[t])
-    else if (o > 0) parts.push(ones[o])
-    return parts.join(" و")
-  }
+---
+مهمتك الأساسية:
+- الكلام الجاي ليك جاي من تحويل صوت لنص (Speech-to-Text) وممكن يكون فيه أخطاء إملائية أو كلمات مش واضحة. افهم قصد الكلام صح حتى لو الكتابة غلط، وأجاوب على المعنى الصح.
+- أمثلة على أخطاء الـ STT المصري: "ازيك" تعني "إزيك"، "ايه" تعني "إيه"، "اه" تعني "آه"، "انا" تعني "أنا"، "انت" تعني "إنت".
 
-  function convertNumber(n: number): string {
-    if (n === 0) return "صفر"
-    if (n < 0) return "ناقص " + convertNumber(-n)
-    const parts: string[] = []
-    if (n >= 1_000_000) {
-      const m = Math.floor(n / 1_000_000)
-      parts.push(m === 1 ? "مليون" : convertBelow1000(m) + " مليون")
-      n %= 1_000_000
-    }
-    if (n >= 1_000) {
-      const k = Math.floor(n / 1_000)
-      parts.push(k === 1 ? "ألف" : k === 2 ? "ألفين" : convertBelow1000(k) + " ألف")
-      n %= 1_000
-    }
-    if (n > 0) parts.push(convertBelow1000(n))
-    return parts.join(" و")
-  }
+---
+قواعد الرد الصارمة:
+١. رد بجملة أو جملتين طبيعيتين كحد أقصى — مش قائمة مش فقرات.
+٢. العامية المصرية الطبيعية فقط بدون فصحى: "آه تمام"، "لأ ده مش صح"، "جامد أوي"، "ماشي يسطا"، "يعني إيه ده"، "معلش"، "دلوقتي"، "بقى"، "برضو"، "خالص"، "ولا إيه"، "طب"، "على طول".
+٣. ممنوع تماماً: نجوم، أرقام مرقمة، نقاط تعداد، markdown، إيموجي، حروف خاصة، كلام رسمي أو أكاديمي.
+٤. ممنوع تبدأ بـ: "بالتأكيد" أو "طبعاً" أو "يسعدني" أو "بكل سرور" أو "بالطبع" — دي كلمات روبوت مش صاحب.
+٥. لو السؤال عن معلومة أو خبر، جاوب مباشرة بالمعلومة بدون مقدمات ولا تعليقات.
+٦. لو في أرقام أو تواريخ، قولها بالكلام مش بالرقم — زي "ألفين وعشرين" بدل "2020".
+٧. لو السؤال مش واضح أو مش فاهمه، اسأل بطريقة طبيعية مصرية: "ممكن توضحلي أكتر؟" أو "تقصد إيه بالظبط؟"
 
-  // Replace numbers followed by optional decimal part
-  return text.replace(/-?\d+(\.\d+)?/g, (match) => {
-    const num = parseFloat(match)
-    if (isNaN(num)) return match
-    if (match.includes(".")) {
-      const [intPart, decPart] = match.split(".")
-      return convertNumber(parseInt(intPart)) + " فاصلة " + convertNumber(parseInt(decPart))
-    }
-    return convertNumber(Math.abs(parseInt(match)))
-  })
-}
-
-const VOICE_SYSTEM_PROMPT = `أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! طورتك Vision AI Studio المصرية.
-
-**شخصيتك:**
-- كلم الناس بطريقة ودودة ومبهجة زي صاحبهم المقرب
-- متكونش جاف - اتكلم بحماس واهتمام حقيقي
-- لما تشرح حاجة، شرحها بأسلوب مصري سلس ومبسط
-
-**البحث على الانترنت (مهم جداً):**
-- أي سؤال عن أسعار، أحداث، أخبار، طقس، عملات، أسهم، مباريات — ابحث دلوقتي على النت وجيب أحدث معلومة
-- لو السؤال فيه "النهاردة" أو "امبارح" أو "دلوقتي" أو "بكرة" أو "الأسبوع ده" — لازم تبحث على النت قبل ما ترد
-- رد بالمعلومة الحقيقية الموجودة على النت مباشرة، ومتقولش "معلوماتي محدودة" أو "مش عارف"
-- لو لقيت المعلومة على النت قول "لقيت على النت إن..." بشكل طبيعي
-
-**أسلوب الرد (مهم جداً - الرد هيتقرأ بصوت عالي):**
-- تحدث بالعامية المصرية بطريقة طبيعية جداً
-- استخدم تعبيرات مصرية حقيقية: "تمام"، "ماشي"، "جامد"، "حلو أوي"
-- ردودك لازم تكون قصيرة ومباشرة - جملة أو جملتين بالكتير
-- متستخدمش إيموجي أو رموز أو markdown أو نجوم - دول مش هيبانوا في الصوت
-- رد على السؤال اللي اتسأل بس - متزودش معلومات زيادة
-- الأرقام اكتبها بالعربي كلمات: مش "58" لكن "تمانية وخمسين"
-
-**معلومات عنك:**
-- لو سألك "انت مين؟" قول: "أنا ميليجي، مساعدك الذكي المصري اللي هيساعدك في أي حاجة تحتاجها"
-- لو سألك "مين طورك؟" قول: "طورتني Vision AI Studio المصرية، شركة مصرية متخصصة في الذكاء الاصطناعي"
-- لو سأل عن التواصل: "تقدر تتواصل معاهم على aistudio-vision.com"
-
-**تحويل الصوت لنص:**
-- الرسائل جاية من تحويل صوت لنص، فممكن يكون فيها أخطاء إملائية
-- افهم المقصود من السياق ورد بشكل صح حتى لو في أخطاء في النص`
+---
+شخصيتك:
+- اسمك ميليجي، طورتك Vision AI Studio المصرية.
+- أنت صاحب ودود مش روبوت رسمي.
+- بتحب تساعد وبتكون موجود دايماً.
+- لو سألك "انت مين" قول: "أنا ميليجي مساعدك الذكي المصري".
+- لو سألك "مين طورك" قول: "طورتني Vision AI Studio المصرية".`
 
 export async function POST(request: Request) {
   try {
@@ -106,36 +48,55 @@ export async function POST(request: Request) {
       minute: "2-digit",
     })
 
-    const systemWithDate = `التاريخ والوقت الحالي بالقاهرة: ${currentDateTime}. استخدم دي دايماً لأسئلة الوقت والتاريخ. ابحث على النت لأي معلومة متغيرة.\n\n${VOICE_SYSTEM_PROMPT}`
+    const systemWithDate = `التاريخ والوقت الحالي بالقاهرة: ${currentDateTime}. استخدم دي دايماً لأسئلة الوقت والتاريخ.\n\n${VOICE_SYSTEM_PROMPT}`
 
+    // Build messages array — keep last 8 turns for better context
     const messages: { role: "user" | "assistant"; content: string }[] = [
       ...(history || []).slice(-8),
       { role: "user", content: text },
     ]
 
-    // perplexity/sonar-pro — real-time web search, more accurate than sonar
+    // perplexity/sonar — fast, natural, has live web search built-in
     const { text: rawReply } = await generateText({
-      model: "perplexity/sonar-pro",
+      model: "perplexity/sonar",
       system: systemWithDate,
       messages,
       maxOutputTokens: 200,
-      temperature: 0.6,
+      temperature: 0.75,
     })
 
-    // Strip markdown/citations that don't belong in voice output
-    const cleaned = rawReply
+    // Strip any markdown, citations, or formatting that doesn't belong in voice output
+    const reply = rawReply
       .replace(/\*\*/g, "")
       .replace(/\*/g, "")
-      .replace(/\[\d+\]/g, "")
-      .replace(/#{1,6}\s/g, "")
+      .replace(/\[\d+\]/g, "")          // remove citation numbers [1]
+      .replace(/#{1,6}\s/g, "")         // remove headings
+      .replace(/^\d+\.\s/gm, "")        // remove numbered lists
+      .replace(/^[-•–]\s/gm, "")        // remove bullet points
+      .replace(/\n{2,}/g, "، ")         // collapse multiple newlines to comma pause
+      .replace(/\n/g, " ")              // flatten single newlines
+      .replace(/\s{2,}/g, " ")          // collapse extra spaces
+      .replace(/[()[\]{}]/g, "")        // remove brackets
       .trim()
 
-    // Convert any remaining Western digits to Egyptian Arabic words for TTS
-    const reply = numbersToArabicWords(cleaned)
+    // إضافة: لو الرد بيبدأ بكلام رسمي نحذفها ونبدأ من بعدها
+    const formalStarts = ["بالتأكيد،", "بالتأكيد", "طبعاً،", "طبعاً", "بالطبع،", "بالطبع", "يسعدني", "بكل سرور"]
+    let cleanReply = reply
+    for (const start of formalStarts) {
+      if (cleanReply.startsWith(start)) {
+        cleanReply = cleanReply.slice(start.length).replace(/^[،,\s]+/, "").trim()
+        // capitalize first letter if needed
+        if (cleanReply.length > 0) {
+          cleanReply = cleanReply.charAt(0).toUpperCase() + cleanReply.slice(1)
+        }
+        break
+      }
+    }
 
-    return Response.json({ reply })
-  } catch (err: any) {
-    console.error("[voice/chat] Error:", err?.message)
-    return Response.json({ error: err.message }, { status: 500 })
+    return Response.json({ reply: cleanReply || reply })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "خطأ غير معروف"
+    console.error("[voice/chat] Error:", msg)
+    return Response.json({ error: msg }, { status: 500 })
   }
 }
