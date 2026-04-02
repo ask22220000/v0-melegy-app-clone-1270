@@ -1,9 +1,4 @@
-import { fal } from "@fal-ai/client"
-
-// Configure with key directly - ensures auth works even without env var
-fal.config({
-  credentials: process.env.FAL_KEY || "a39c63bd-f0c0-434e-a097-3b2db83e10d6:b4690234c50913962db3917c022cffc2",
-})
+const FAL_KEY = process.env.FAL_KEY || "a39c63bd-f0c0-434e-a097-3b2db83e10d6:b4690234c50913962db3917c022cffc2"
 
 export interface FalChatOptions {
   model?: string
@@ -13,8 +8,7 @@ export interface FalChatOptions {
 }
 
 /**
- * Call Fal OpenRouter for text generation.
- * Builds a single prompt string from conversation history + current message.
+ * Call Fal OpenRouter via REST API directly - bypasses client auth issues.
  */
 export async function falChat(
   userMessage: string,
@@ -43,16 +37,28 @@ export async function falChat(
 
   const fullPrompt = conversationContext + `المستخدم: ${userMessage}\nميليجي:`
 
-  const result = await fal.subscribe("openrouter/router", {
-    input: {
-      model,
-      prompt: fullPrompt,
-      ...(systemPrompt ? { system_prompt: systemPrompt } : {}),
-      max_tokens: maxTokens,
-      temperature,
+  const body: Record<string, any> = {
+    model,
+    prompt: fullPrompt,
+    max_tokens: maxTokens,
+    temperature,
+  }
+  if (systemPrompt) body.system_prompt = systemPrompt
+
+  const res = await fetch("https://fal.run/openrouter/router", {
+    method: "POST",
+    headers: {
+      "Authorization": `Key ${FAL_KEY}`,
+      "Content-Type": "application/json",
     },
+    body: JSON.stringify(body),
   })
 
-  const data = result.data as any
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Fal API error ${res.status}: ${err}`)
+  }
+
+  const data = await res.json()
   return (data?.output || "").trim()
 }
