@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { fal } from "@/lib/fal-config"
+import { falRun } from "@/lib/fal-config"
 import { processPromptForImageEditing } from "@/lib/prompt-enhancer"
 
 // Increase body size limit for base64 images (50MB)
@@ -41,14 +41,12 @@ export async function POST(request: NextRequest) {
     // Required: prompt + image_urls (array). No strength/num_inference_steps in this model.
     let result: any
     try {
-      result = await fal.subscribe("fal-ai/nano-banana/edit", {
-        input: {
-          prompt: enhancedPrompt,
-          image_urls: finalImageUrls,
-          num_images: 1,
-          output_format: "jpeg",
-          safety_tolerance: "4",
-        },
+      result = await falRun("fal-ai/nano-banana/edit", {
+        prompt: enhancedPrompt,
+        image_urls: finalImageUrls,
+        num_images: 1,
+        output_format: "jpeg",
+        safety_tolerance: "4",
       })
     } catch (falError: any) {
       console.error("[edit] FAL API error:", falError)
@@ -72,8 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // fal JS client wraps response in result.data — images are at result.data.images
-    const editedImageUrl: string | undefined =
-      result?.data?.images?.[0]?.url ?? result?.images?.[0]?.url
+    const editedImageUrl: string | undefined = result?.images?.[0]?.url
 
     if (!editedImageUrl) {
       throw new Error("FAL API did not return an edited image")

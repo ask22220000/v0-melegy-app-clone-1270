@@ -1,4 +1,4 @@
-import { fal } from "@/lib/fal-config"
+import { falRun } from "@/lib/fal-config"
 import { NextResponse } from "next/server"
 import { headers } from "next/headers"
 import { getDailyUsage, getEffectivePlan, todayEgypt } from "@/lib/db"
@@ -73,21 +73,16 @@ export async function POST(req: Request) {
     const isArabic = /[\u0600-\u06FF]/.test(prompt || "")
     if (isArabic && prompt) finalPrompt = enhanceArabicPrompt(prompt)
 
-    const result = await fal.subscribe("fal-ai/fast-animatediff/image-to-video", {
-      input: {
-        image_url: imageUrl,
-        prompt: finalPrompt,
-        video_size: {
-          width: 512,
-          height: 512,
-        },
-        num_frames: 8,
-        num_inference_steps: 25,
-        guidance_scale: 7.5,
-      },
+    const result = await falRun("fal-ai/fast-animatediff/image-to-video", {
+      image_url: imageUrl,
+      prompt: finalPrompt,
+      video_size: { width: 512, height: 512 },
+      num_frames: 8,
+      num_inference_steps: 25,
+      guidance_scale: 7.5,
     })
 
-    const videoUrl = result.data?.video?.url
+    const videoUrl = result?.video?.url
 
     if (!videoUrl) {
       throw new Error("No video URL in response")

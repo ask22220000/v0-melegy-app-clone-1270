@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { headers } from "next/headers"
-import { fal } from "@/lib/fal-config"
+import { falRun } from "@/lib/fal-config"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
 import { getDailyUsage, getEffectivePlan, todayEgypt } from "@/lib/db"
@@ -119,13 +119,11 @@ export async function POST(req: Request) {
     const finalPrompt = `${englishPrompt}, ${FACE_PRESERVE_SUFFIX}`
 
     // 4. Generate video via fal.ai — hailuo-02-fast image-to-video
-    const result = await fal.subscribe("fal-ai/minimax/hailuo-02-fast/image-to-video", {
-      input: {
-        image_url: publicImageUrl,
-        prompt: finalPrompt,
-        duration: "6",
-        prompt_optimizer: true,
-      },
+    const result = await falRun("fal-ai/minimax/hailuo-02-fast/image-to-video", {
+      image_url: publicImageUrl,
+      prompt: finalPrompt,
+      duration: "6",
+      prompt_optimizer: true,
     }) as any
 
     const rawVideoUrl: string | undefined =

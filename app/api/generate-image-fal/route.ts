@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { fal } from "@/lib/fal-config"
+import { falRun } from "@/lib/fal-config"
 import { processPromptForImageGeneration } from "@/lib/prompt-enhancer"
 
 export const maxDuration = 60
@@ -8,26 +8,18 @@ export const runtime = "nodejs"
 export async function POST(request: NextRequest) {
   try {
     const { prompt } = await request.json()
+    if (!prompt) return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
 
-    if (!prompt) {
-      return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
-    }
-
-    // Process prompt: translate + enhance
     const finalPrompt = await processPromptForImageGeneration(prompt)
 
-    // Generate image using the fal schnell model with 4:5 portrait format (1080x1350)
-    const result = await fal.subscribe("fal-ai/flux/schnell", {
-      input: {
-        prompt: finalPrompt,
-        image_size: { width: 1080, height: 1350 },
-        num_inference_steps: 4,
-        num_images: 1,
-      },
+    const data = await falRun("fal-ai/flux/schnell", {
+      prompt: finalPrompt,
+      image_size: { width: 1080, height: 1350 },
+      num_inference_steps: 4,
+      num_images: 1,
     })
 
-    const imageUrl = (result as any).images?.[0]?.url
-
+    const imageUrl = data?.images?.[0]?.url
     if (!imageUrl) throw new Error("No image generated")
 
     return NextResponse.json({ imageUrl })

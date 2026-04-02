@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { fal } from "@/lib/fal-config"
+import { falRun } from "@/lib/fal-config"
 import { processPromptForImageGeneration } from "@/lib/prompt-enhancer"
 
 export const maxDuration = 60
@@ -39,14 +39,12 @@ export async function POST(request: NextRequest) {
     // Step 3: Generate image via fal-ai/flux/schnell
     let result: any
     try {
-      result = await fal.subscribe("fal-ai/flux/schnell", {
-        input: {
-          prompt: falPrompt,
-          image_size: { width: 1080, height: 1350 }, // 4:5 portrait
-          num_inference_steps: 4,
-          num_images: 1,
-          enable_safety_checker: false,
-        },
+      result = await falRun("fal-ai/flux/schnell", {
+        prompt: falPrompt,
+        image_size: { width: 1080, height: 1350 },
+        num_inference_steps: 4,
+        num_images: 1,
+        enable_safety_checker: false,
       })
     } catch (falError: any) {
       console.error("[generate] FAL API error:", falError)
@@ -59,9 +57,7 @@ export async function POST(request: NextRequest) {
       throw falError
     }
 
-    // fal-ai/flux/schnell returns images directly on the result object
-    const imageUrl: string | undefined =
-      result?.images?.[0]?.url ?? result?.data?.images?.[0]?.url
+    const imageUrl: string | undefined = result?.images?.[0]?.url
 
     if (!imageUrl) {
       throw new Error("FAL API did not return an image")

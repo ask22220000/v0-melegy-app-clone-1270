@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { fal } from "@/lib/fal-config"
+import { falRun } from "@/lib/fal-config"
 import { IMAGE_EDIT_QUALITY_CONSTANTS } from "@/lib/prompt-enhancer"
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY
@@ -111,14 +111,12 @@ export async function POST(request: NextRequest) {
     let editedImageUrl: string | undefined
 
     try {
-      const result = (await fal.subscribe("fal-ai/nano-banana/edit", {
-        input: {
-          prompt: enhancedPrompt,
-          image_urls: [imageUrl],
-          num_images: 1,
-          output_format: "png",
-          safety_tolerance: "4",
-        },
+      const result = (await falRun("fal-ai/nano-banana/edit", {
+        prompt: enhancedPrompt,
+        image_urls: [imageUrl],
+        num_images: 1,
+        output_format: "png",
+        safety_tolerance: "4",
       })) as { images?: { url: string }[] }
 
       editedImageUrl = result.images?.[0]?.url
