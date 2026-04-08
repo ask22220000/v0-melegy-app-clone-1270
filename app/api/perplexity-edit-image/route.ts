@@ -1,11 +1,10 @@
-import * as fal from "@fal-ai/serverless-client"
+import { falRun } from "@/lib/fal-config"
 import { NextResponse } from "next/server"
 import { IMAGE_EDIT_QUALITY_CONSTANTS } from "@/lib/prompt-enhancer"
 
 function enhanceArabicPrompt(prompt: string): string {
   const arabicToEnglish: Record<string, string> = {
-    "الفن القبطي":
-      "Coptic art style, traditional Egyptian Christian iconography, gold leaf details, religious Byzantine influence",
+    "الفن القبطي": "Coptic art style, traditional Egyptian Christian iconography, gold leaf details, religious Byzantine influence",
     "فن قبطي": "Coptic art style, traditional Egyptian Christian iconography, Byzantine style",
     العدرا: "Virgin Mary, Saint Mary, blessed mother Mary, religious icon painting, holy figure with halo",
     العذراء: "Virgin Mary, Saint Mary, blessed mother, religious Christian icon, holy Madonna",
@@ -33,36 +32,18 @@ function enhanceArabicPrompt(prompt: string): string {
   }
 
   let enhancedPrompt = prompt.toLowerCase()
-
   for (const [arabic, english] of Object.entries(arabicToEnglish)) {
     const regex = new RegExp(arabic, "gi")
     enhancedPrompt = enhancedPrompt.replace(regex, english)
   }
 
-  const fillerWords = [
-    "عاوز",
-    "عايز",
-    "اعمللي",
-    "اعملي",
-    "اعمل",
-    "صورة",
-    "باسلوب",
-    "بأسلوب",
-    "لـ",
-    "ل",
-    "في",
-    "من",
-    "على",
-    "خلي",
-    "خليه",
-  ]
+  const fillerWords = ["عاوز", "عايز", "اعمللي", "اعملي", "اعمل", "صورة", "باسلوب", "بأسلوب", "لـ", "ل", "في", "من", "على", "خلي", "خليه"]
   fillerWords.forEach((word) => {
     const regex = new RegExp(`\\b${word}\\b`, "gi")
     enhancedPrompt = enhancedPrompt.replace(regex, "")
   })
 
   enhancedPrompt = enhancedPrompt.replace(/\s+/g, " ").trim()
-  // CRITICAL: never add people/faces unless user explicitly asked for them
   return `Apply only the following changes to the image: ${enhancedPrompt}. Do NOT add any people, faces, or figures not present in the original. Preserve the original subject and background. ${IMAGE_EDIT_QUALITY_CONSTANTS}`
 }
 
@@ -74,36 +55,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Image URL and prompt are required" }, { status: 400 })
     }
 
-    if (!process.env.FAL_KEY) {
-      return NextResponse.json({ error: "FAL_KEY is not configured" }, { status: 500 })
-    }
-    fal.config({
-      credentials: process.env.FAL_KEY,
-    })
-
     let finalPrompt = prompt
     const isArabic = /[\u0600-\u06FF]/.test(prompt)
+    if (isArabic) finalPrompt = enhanceArabicPrompt(prompt)
 
-    if (isArabic) {
-      finalPrompt = enhanceArabicPrompt(prompt)
-    }
-
-    const result = await fal.subscribe("fal-ai/flux-2-flex/edit", {
-      input: {
-        image_url: imageUrl,
-        prompt: finalPrompt,
-        strength: 0.35,
-        num_inference_steps: 40,
-        guidance_scale: 7.5,
-        num_images: 1,
-        enable_safety_checker: false,
-      },
+    const result = await falRun("fal-ai/flux-2-flex/edit", {
+      image_url: imageUrl,
+      prompt: finalPrompt,
+      strength: 0.35,
+      num_inference_steps: 40,
+      guidance_scale: 7.5,
+      num_images: 1,
+      enable_safety_checker: false,
     })
 
-    const editedImageUrl = result.images?.[0]?.url
+    const editedImageUrl = result?.images?.[0]?.url
 
     if (!editedImageUrl) {
-      console.error("[v0] fal.ai response:", JSON.stringify(result, null, 2))
       throw new Error("No edited image URL in response")
     }
 

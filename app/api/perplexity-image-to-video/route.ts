@@ -1,4 +1,4 @@
-import * as fal from "@fal-ai/serverless-client"
+import { falRun } from "@/lib/fal-config"
 import { NextResponse } from "next/server"
 import { headers } from "next/headers"
 import { getDailyUsage, getEffectivePlan, todayEgypt } from "@/lib/db"
@@ -69,35 +69,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Image URL is required" }, { status: 400 })
     }
 
-    if (!process.env.FAL_KEY) {
-      return NextResponse.json({ error: "FAL_KEY is not configured" }, { status: 500 })
-    }
-    fal.config({
-      credentials: process.env.FAL_KEY,
-    })
-
     let finalPrompt = prompt || "Animate this image naturally with smooth motion"
     const isArabic = /[\u0600-\u06FF]/.test(prompt || "")
+    if (isArabic && prompt) finalPrompt = enhanceArabicPrompt(prompt)
 
-    if (isArabic && prompt) {
-      finalPrompt = enhanceArabicPrompt(prompt)
-    }
-
-    const result = await fal.subscribe("fal-ai/fast-animatediff/image-to-video", {
-      input: {
-        image_url: imageUrl,
-        prompt: finalPrompt,
-        video_size: {
-          width: 512,
-          height: 512,
-        },
-        num_frames: 8,
-        num_inference_steps: 25,
-        guidance_scale: 7.5,
-      },
+    const result = await falRun("fal-ai/fast-animatediff/image-to-video", {
+      image_url: imageUrl,
+      prompt: finalPrompt,
+      video_size: { width: 512, height: 512 },
+      num_frames: 8,
+      num_inference_steps: 25,
+      guidance_scale: 7.5,
     })
 
-    const videoUrl = result.data?.video?.url
+    const videoUrl = result?.video?.url
 
     if (!videoUrl) {
       throw new Error("No video URL in response")

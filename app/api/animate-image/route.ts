@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { headers } from "next/headers"
-import * as fal from "@fal-ai/serverless-client"
+import { falRun } from "@/lib/fal-config"
 import { put } from "@vercel/blob"
 import Groq from "groq-sdk"
 import { getDailyUsage, getEffectivePlan, todayEgypt } from "@/lib/db"
@@ -27,8 +27,7 @@ async function checkVideoLimit(ip: string): Promise<{ allowed: boolean; reason?:
 
 export const maxDuration = 300
 
-// Configure fal at module level — prevents AI Gateway override
-fal.config({ credentials: process.env.FAL_KEY })
+// fal is configured in lib/fal-config.ts
 
 // Lazy — avoids top-level instantiation during build
 function getGroq() {
@@ -120,13 +119,11 @@ export async function POST(req: Request) {
     const finalPrompt = `${englishPrompt}, ${FACE_PRESERVE_SUFFIX}`
 
     // 4. Generate video via fal.ai — hailuo-02-fast image-to-video
-    const result = await fal.subscribe("fal-ai/minimax/hailuo-02-fast/image-to-video", {
-      input: {
-        image_url: publicImageUrl,
-        prompt: finalPrompt,
-        duration: "6",
-        prompt_optimizer: true,
-      },
+    const result = await falRun("fal-ai/minimax/hailuo-02-fast/image-to-video", {
+      image_url: publicImageUrl,
+      prompt: finalPrompt,
+      duration: "6",
+      prompt_optimizer: true,
     }) as any
 
     const rawVideoUrl: string | undefined =
