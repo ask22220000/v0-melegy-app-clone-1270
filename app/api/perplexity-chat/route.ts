@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
+ v0/visionaieg-2041-978f6390
 import { falChat } from "@/lib/fal-chat"
 import { getModel, urlToInlinePart, stripMarkdown } from "@/lib/gemini"
+
+import { generateWithFalRouter, generateWithFalRouterVision } from "@/lib/falRouterService"
+ main
 
 const EGYPTIAN_SYSTEM_PROMPT = `أنت ميليجي، مساعد ذكي مصري ودود جداً بشخصية حقيقية ومرحة! طورتك Vision AI Studio المصرية.
 
@@ -51,6 +55,7 @@ export async function POST(request: NextRequest) {
 
     const fullSystemPrompt = EGYPTIAN_SYSTEM_PROMPT + dateTimeContext
 
+ v0/visionaieg-2041-978f6390
     // If image is provided → use Gemini vision (Fal OpenRouter doesn't support multimodal)
     if (imageUrl) {
       try {
@@ -66,11 +71,24 @@ export async function POST(request: NextRequest) {
           detectedEmotion: "neutral",
           emotionScore: 0,
         })
+
+    // Analyze image with Fal OpenRouter vision if available
+    let imageAnalysisContext = ""
+    if (imageUrl) {
+      try {
+        imageAnalysisContext = await generateWithFalRouterVision(
+          "اوصف الصورة بالتفصيل بالعربية",
+          userPrompt || "اوصف الصورة دي بالتفصيل",
+          imageUrl,
+          { maxTokens: 300, model: "google/gemini-2.0-flash-001" }
+        )
+ main
       } catch (e: any) {
         console.error("[API] Vision error:", e.message)
       }
     }
 
+ v0/visionaieg-2041-978f6390
     // Text chat via Fal OpenRouter
     const history = conversationHistory
       .filter((m: any) => (m.role === "user" || m.role === "assistant") && m.content?.trim())
@@ -84,6 +102,43 @@ export async function POST(request: NextRequest) {
     })
 
     const cleanedText = stripMarkdown(responseText)
+
+    // Ensure no consecutive messages from same role
+    if (messages.length > 0 && messages[messages.length - 1].role === "user") {
+      messages.pop()
+    }
+
+    // Add current message
+    const currentContent = imageAnalysisContext 
+      ? `تحليل الصورة: ${imageAnalysisContext.substring(0, 300)}... السؤال: ${userPrompt}`
+      : userPrompt
+
+    messages.push({
+      role: "user",
+      content: currentContent,
+    })
+
+    // Inject real datetime from client device
+    const dateTimeContext = clientDateTime
+      ? `\n\n**التاريخ والوقت الحالي من جهاز المستخدم:** ${clientDateTime}\nاستخدم هذا التاريخ والوقت دايماً لما حد يسأل عن التاريخ أو الوقت.`
+      : ""
+
+    const systemWithDateTime = EGYPTIAN_SYSTEM_PROMPT + dateTimeContext
+
+    console.log(`[API] Using Fal OpenRouter for query: ${userPrompt.substring(0, 50)}`)
+
+    // Generate response using Fal OpenRouter
+    const result = await generateWithFalRouter(
+      systemWithDateTime,
+      messages,
+      { maxTokens: 600, temperature: 0.7 }
+    )
+
+    const cleanedText = result
+      .replace(/\*\*/g, "")
+      .replace(/\[\d+\]/g, "")
+      .trim()
+ main
 
     return NextResponse.json({
       response: cleanedText || "معلش حصل مشكلة، جرب تاني 😅",

@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     }
 
     const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API
+    // Hammam - Egyptian Arabic voice
     const VOICE_ID = "VxSsN5NGusWQZXue7VE9"
 
     if (!ELEVENLABS_API_KEY) {
