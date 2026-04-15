@@ -1,152 +1,143 @@
-import { NextResponse } from "next/server"
-import { headers } from "next/headers"
-import * as fal from "@fal-ai/serverless-client"
-import { put } from "@vercel/blob"
-import Groq from "groq-sdk"
-import { getDailyUsage, getEffectivePlan, todayEgypt } from "@/lib/db"
-import { PLAN_LIMITS } from "@/lib/usage-tracker"
+import { NextRequest, NextResponse } from "next/server"
+import { checkVideoLimit, incrementDailyUsage } from "@/lib/db"
 
-const FREE_VIDEO_LIMIT = PLAN_LIMITS.free.animatedVideosPerDay
-
-async function checkVideoLimit(ip: string): Promise<{ allowed: boolean; reason?: string }> {
-  try {
-    const plan = await getEffectivePlan(ip)
-    if (plan !== "free") return { allowed: true }
-    const usage = await getDailyUsage(ip, todayEgypt())
-    if (usage.animated_videos >= FREE_VIDEO_LIMIT) {
-      return {
-        allowed: false,
-        reason: `لقد وصلت للحد الأقصى (${FREE_VIDEO_LIMIT} فيديو/يوم) في الخطة المجانية. قم بالترقية للمزيد!`,
-      }
-    }
-    return { allowed: true }
-  } catch {
-    return { allowed: true }
-  }
-}
-
+export const runtime   = "nodejs"
 export const maxDuration = 300
 
-// Configure fal at module level — prevents AI Gateway override
-fal.config({ credentials: process.env.FAL_KEY })
+const FAL_KEY  = "08544582-ba61-43d5-a263-bf6e43c270d0:a5ed3043bd0c93140f12b73f4eeb242f"
+const FAL_BASE = "https://queue.fal.run"
+const MODEL    = "fal-ai/wan/v2.6/image-to-video/flash"
 
-// Lazy — avoids top-level instantiation during build
-function getGroq() {
-  return new Groq({ apiKey: process.env.GROQ_API_KEY })
-}
-
-async function translateToEnglish(prompt: string): Promise<string> {
-  const hasArabic = /[\u0600-\u06FF]/.test(prompt)
-  if (!hasArabic) return prompt
+// ── Translate prompt to English via Groq ──────────────────────────────────
+async function translatePrompt(text: string): Promise<string> {
+  const groqKey = process.env.GROQ_API_KEY
+  if (!groqKey) return text
+  const hasArabic = /[\u0600-\u06FF]/.test(text)
+  if (!hasArabic) return text
   try {
-    const res = await getGroq().chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional translator. Translate the following Arabic text (including Egyptian dialect) to English. Return ONLY the English translation — no explanations, no extra text.",
-        },
-        { role: "user", content: prompt },
-      ],
-      max_tokens: 200,
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a translator. Translate Arabic/Egyptian dialect text to English for AI video generation. Return ONLY the English translation, nothing else.",
+          },
+          { role: "user", content: text },
+        ],
+        max_tokens: 300,
+        temperature: 0.2,
+      }),
     })
-    return res.choices[0]?.message?.content?.trim() || prompt
+    if (!res.ok) return text
+    const data = await res.json()
+    return data.choices?.[0]?.message?.content?.trim() || text
   } catch {
-    return prompt
+    return text
   }
 }
 
-async function ensurePublicBlobUrl(imageUrl: string): Promise<string> {
-  if (imageUrl.includes("public.blob.vercel-storage.com")) return imageUrl
-
-  if (imageUrl.startsWith("data:")) {
-    const matches = imageUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/)
-    if (!matches) throw new Error("Invalid data URL format")
-    const contentType = matches[1]
-    const base64Data = matches[2]
-    const buffer = Buffer.from(base64Data, "base64")
-    const ext = contentType.includes("png") ? "png" : "jpg"
-    const { url } = await put(`animate-src-${Date.now()}.${ext}`, buffer, {
-      access: "public",
-      contentType,
-    })
-    return url
-  }
-
-  const imgRes = await fetch(imageUrl)
-  if (!imgRes.ok) throw new Error(`Cannot fetch image: ${imgRes.status}`)
-  const imgBuffer = await imgRes.arrayBuffer()
-  const contentType = imgRes.headers.get("content-type") || "image/png"
-  const ext = contentType.includes("jpeg") || contentType.includes("jpg") ? "jpg" : "png"
-  const { url } = await put(`animate-src-${Date.now()}.${ext}`, Buffer.from(imgBuffer), {
-    access: "public",
-    contentType,
+// ── Submit job to fal queue ────────────────────────────────────────────────
+async function submitJob(input: object): Promise<string> {
+  const res = await fetch(`${FAL_BASE}/${MODEL}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Key ${FAL_KEY}` },
+    body: JSON.stringify(input),
   })
-  return url
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`fal submit failed ${res.status}: ${err}`)
+  }
+  const data = await res.json()
+  return data.request_id as string
 }
 
-export async function POST(req: Request) {
-  try {
-    const headersList = await headers()
-    const ip =
-      (headersList.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
-      headersList.get("x-real-ip") ||
-      "unknown"
-
-    const limitCheck = await checkVideoLimit(ip)
-    if (!limitCheck.allowed) {
-      return NextResponse.json({ error: limitCheck.reason }, { status: 429 })
+// ── Poll queue until COMPLETED or FAILED ──────────────────────────────────
+async function pollResult(requestId: string): Promise<any> {
+  const deadline = Date.now() + 4 * 60 * 1000
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 5000))
+    const statusRes = await fetch(`${FAL_BASE}/${MODEL}/requests/${requestId}/status`, {
+      headers: { Authorization: `Key ${FAL_KEY}` },
+    })
+    if (!statusRes.ok) continue
+    const status = await statusRes.json()
+    if (status.status === "COMPLETED") {
+      const resultRes = await fetch(`${FAL_BASE}/${MODEL}/requests/${requestId}`, {
+        headers: { Authorization: `Key ${FAL_KEY}` },
+      })
+      if (!resultRes.ok) throw new Error("Failed to fetch result")
+      return await resultRes.json()
     }
+    if (status.status === "FAILED") throw new Error(`fal job failed: ${JSON.stringify(status)}`)
+  }
+  throw new Error("Timeout: video generation took too long")
+}
 
-    const { imageUrl, prompt, generateAudio } = await req.json()
+// ── Main handler ──────────────────────────────────────────────────────────
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { userId, prompt, imageUrl, duration = "5", resolution = "720p" } = body
 
     if (!imageUrl) return NextResponse.json({ error: "imageUrl مطلوب" }, { status: 400 })
-    if (!prompt) return NextResponse.json({ error: "prompt مطلوب" }, { status: 400 })
 
-    // 1. Translate Arabic prompt to English
-    const englishPrompt = await translateToEnglish(prompt)
+    // Check usage limit
+    if (userId) {
+      const allowed = await checkVideoLimit(userId)
+      if (!allowed) {
+        return NextResponse.json(
+          { error: "وصلت للحد اليومي من الفيديوهات. قم بالترقية للمزيد." },
+          { status: 429 }
+        )
+      }
+    }
 
-    // 2. Ensure image is publicly accessible
-    const publicImageUrl = await ensurePublicBlobUrl(imageUrl)
+    // Translate prompt
+    const englishPrompt = await translatePrompt(
+      prompt || "Animate this image with smooth natural cinematic motion"
+    )
 
-    // 3. Fixed prompt suffix — preserve faces/people/products identity 100%
-    const FACE_PRESERVE_SUFFIX =
-      "preserve exact facial features and identity of all people and products, photorealistic, consistent appearance, natural smooth cinematic motion, subtle gentle movement, no face distortion, no morphing, no warping, high fidelity"
+    const finalPrompt = `${englishPrompt}, smooth natural motion, cinematic quality, high fidelity`
+    const negativePrompt = "low quality, blurry, distorted, watermark, text, artifacts"
 
-    const NEGATIVE_PROMPT =
-      "face distortion, face morphing, identity change, different person, altered appearance, deformed face, blurry face, low quality, watermark, text, duplicate, ugly, mutation, extra limbs, unrealistic motion, jerky motion"
-
-    const finalPrompt = `${englishPrompt}, ${FACE_PRESERVE_SUFFIX}`
-
-    // 4. Generate video via fal.ai — hailuo-02-fast image-to-video
-    const result = await fal.subscribe("fal-ai/minimax/hailuo-02-fast/image-to-video", {
-      input: {
-        image_url: publicImageUrl,
-        prompt: finalPrompt,
-        duration: "6",
-        prompt_optimizer: true,
-      },
-    }) as any
-
-    const rawVideoUrl: string | undefined =
-      result?.video?.url ?? result?.data?.video?.url ?? result?.videos?.[0]?.url
-
-    if (!rawVideoUrl) throw new Error("No video URL returned from model")
-
-    // 5. Fetch and save to Vercel Blob
-    const vidRes = await fetch(rawVideoUrl)
-    if (!vidRes.ok) throw new Error(`Cannot fetch video: ${vidRes.status}`)
-    const vidBuffer = await vidRes.arrayBuffer()
-
-    const { url: videoUrl } = await put(`melegy-video-${Date.now()}.mp4`, Buffer.from(vidBuffer), {
-      access: "public",
-      contentType: "video/mp4",
+    // Submit to fal queue
+    const requestId = await submitJob({
+      prompt:                  finalPrompt,
+      image_url:               imageUrl,
+      duration,
+      resolution,
+      negative_prompt:         negativePrompt,
+      enable_prompt_expansion: false,
+      enable_safety_checker:   true,
     })
 
-    return NextResponse.json({ videoUrl })
-  } catch (error: any) {
-    console.error("[animate-image] Error:", error?.message || error)
-    return NextResponse.json({ error: "فشل توليد الفيديو. حاول مرة تانية." }, { status: 500 })
+    // Poll for result
+    const result = await pollResult(requestId)
+
+    const videoUrl =
+      result?.video?.url ??
+      result?.data?.video?.url ??
+      result?.videos?.[0]?.url
+
+    if (!videoUrl) throw new Error("No video URL in response")
+
+    // Increment usage
+    if (userId) await incrementDailyUsage(userId, "animated_videos", 1)
+
+    return NextResponse.json({
+      videoUrl,
+      seed:         result?.seed         ?? result?.data?.seed,
+      actualPrompt: result?.actual_prompt ?? englishPrompt,
+    })
+  } catch (err: any) {
+    console.error("[animate-image] error:", err?.message)
+    return NextResponse.json(
+      { error: err?.message ?? "فشل توليد الفيديو، حاول مرة أخرى" },
+      { status: 500 }
+    )
   }
 }

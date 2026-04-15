@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
     const cleanedText = result.text
       .replace(/\*\*/g, "")
       .replace(/\[\d+\]/g, "")
+      .replace(/^(المساعد|الذكاء الاصطناعي|ميليجي)\s*:\s*/u, "")
       .trim()
 
     return NextResponse.json({
