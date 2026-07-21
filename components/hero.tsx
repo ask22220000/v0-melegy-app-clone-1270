@@ -6,22 +6,16 @@ import { MessageSquare, ArrowDown, Smartphone, Apple, X, Share, PlusSquare } fro
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useApp } from "@/lib/contexts/AppContext"
-import { useAuth } from "@/lib/contexts/AuthContext"
 
 export function Hero() {
   const { translations, language } = useApp()
-  const { user, loading } = useAuth()
   const router = useRouter()
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [installed, setInstalled] = useState(false)
   const [showAppleGuide, setShowAppleGuide] = useState(false)
 
   const handleStartChat = () => {
-    if (user) {
-      router.push("/chat")
-    } else {
-      router.push("/signup")
-    }
+    router.push("/chat")
   }
 
   useEffect(() => {
@@ -73,8 +67,7 @@ export function Hero() {
         <Button 
           size="lg" 
           onClick={handleStartChat}
-          disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg rounded-xl"
         >
           <MessageSquare className={language === "ar" ? "ml-2 h-5 w-5" : "mr-2 h-5 w-5"} />
           {translations.startChat}

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useApp } from "@/lib/contexts/AppContext"
-import { useAuth } from "@/lib/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
@@ -68,15 +67,7 @@ interface ChatHistory {
 
 export default function ChatPage() {
   const { translations, language, setLanguage } = useApp()
-  const { user, loading } = useAuth()
   const router = useRouter()
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login")
-    }
-  }, [user, loading, router])
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -217,12 +208,7 @@ export default function ChatPage() {
     }
   }
 
-  // Load user conversations when authenticated
-  useEffect(() => {
-    if (user?.id) {
-      loadConversationsFromServer(user.id)
-    }
-  }, [user?.id])
+
 
   useEffect(() => {
     fetch("/api/usage", { cache: "no-store" })
