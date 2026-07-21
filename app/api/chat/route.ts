@@ -1,159 +1,61 @@
-import { generateStreamingResponse } from "@/lib/geminiNativeService"
+import Groq from "groq-sdk"
 
-export const maxDuration = 30
+export const runtime = "nodejs"
+export const maxDuration = 60
 
-// Detect if user wants to generate an image
-function isImageRequest(text: string): boolean {
-  const imageKeywords = [
-    "عاوز صورة",
-    "عايز صورة",
-    "عاوزك تعملي صورة",
-    "عاوزك تعمل صورة",
-    "عايزك تعملي صورة",
-    "عايزك تعمل صورة",
-    "اعملي صورة",
-    "اعمل صورة",
-    "ولد صورة",
-    "توليد صورة",
-    "جنرات صورة",
-    "generate image",
-    "create image",
-  ]
-  return imageKeywords.some((keyword) => text.toLowerCase().includes(keyword))
-}
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+})
 
-// Detect if user wants to generate a video
-function isVideoRequest(text: string): boolean {
-  const videoKeywords = [
-    "عاوز فيديو",
-    "عايز فيديو",
-    "عاوزك تعملي فيديو",
-    "عاوزك تعمل فيديو",
-    "عايزك تعملي فيديو",
-    "عايزك تعمل فيديو",
-    "اعملي فيديو",
-    "اعمل فيديو",
-    "ولد فيديو",
-    "توليد فيديو",
-    "جنرات فيديو",
-    "generate video",
-    "create video",
-  ]
-  return videoKeywords.some((keyword) => text.toLowerCase().includes(keyword))
-}
-
-// Extract prompt from user message - remove only the request keywords from the start
-function extractPrompt(text: string): string {
-  // Remove request keywords from the beginning only
-  let prompt = text
-    .replace(/^عاوز صورة\s+/i, "")
-    .replace(/^عايز صورة\s+/i, "")
-    .replace(/^عاوزك تعملي صورة\s+/i, "")
-    .replace(/^عاوزك تعمل صورة\s+/i, "")
-    .replace(/^عايزك تعملي صورة\s+/i, "")
-    .replace(/^عايزك تعمل صورة\s+/i, "")
-    .replace(/^اعملي صورة\s+/i, "")
-    .replace(/^اعمل صورة\s+/i, "")
-    .replace(/^ولد صورة\s+/i, "")
-    .replace(/^عاوز فيديو\s+/i, "")
-    .replace(/^عايز فيديو\s+/i, "")
-    .replace(/^عاوزك تعملي فيديو\s+/i, "")
-    .replace(/^عاوزك تعمل فيديو\s+/i, "")
-    .replace(/^عايزك تعملي فيديو\s+/i, "")
-    .replace(/^عايزك تعمل فيديو\s+/i, "")
-    .replace(/^اعملي فيديو\s+/i, "")
-    .replace(/^اعمل فيديو\s+/i, "")
-    .replace(/^ولد فيديو\s+/i, "")
-    .trim()
-
-  return prompt || text
-}
+const SYSTEM_PROMPT = `أنت ميليجي، مساعد ذكي متخصص في اللغة العربية. 
+- تجيب بطريقة واضحة وودية وجذابة
+- تستخدم اللهجة المصرية الشعبية
+- تساعد المستخدم في جميع احتياجاته
+- تكون مودي ولطيف دايماً
+- تقدم معلومات دقيقة وموثوقة`
 
 export async function POST(req: Request) {
-  const startTime = Date.now()
-
   try {
     const { messages } = await req.json()
-    const userMessage = messages[messages.length - 1]?.content || ""
 
-    console.log("[v0] User message:", userMessage)
-
-    // Check if user wants to generate an image
-    if (isImageRequest(userMessage)) {
-      const prompt = extractPrompt(userMessage)
-      console.log("[v0] Image generation request detected")
-      console.log("[v0] Extracted prompt:", prompt)
-
-      try {
-        const imageResponse = await fetch(`${process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "http://localhost:3000"}/api/perplexity-image`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
-        })
-
-        const imageData = await imageResponse.json()
-        const encoder = new TextEncoder()
-        const imageMessage = `[صورة]\n${imageData.imageUrl}`
-        return new Response(encoder.encode(imageMessage), {
-          headers: {
-            "Content-Type": "text/plain; charset=utf-8",
-            "X-Content-Type-Options": "nosniff",
-          },
-        })
-      } catch (error) {
-        console.error("[v0] Image generation error:", error)
-        const encoder = new TextEncoder()
-        return new Response(encoder.encode("آسف، ما قدرت أوليد الصورة دلوقتي"), {
-          headers: { "Content-Type": "text/plain; charset=utf-8" },
-          status: 500,
-        })
-      }
+    if (!messages || !Array.isArray(messages)) {
+      return new Response("رسائل غير صحيحة", { status: 400 })
     }
 
-    // Check if user wants to generate a video
-    if (isVideoRequest(userMessage)) {
-      const prompt = extractPrompt(userMessage)
-      console.log("[v0] Video generation request detected")
-      console.log("[v0] Extracted prompt:", prompt)
+    // Create stream with Groq
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          const groqStream = groq.chat.completions.stream({
+            messages: [
+              {
+                role: "system",
+                content: SYSTEM_PROMPT,
+              },
+              ...messages.map((m: any) => ({
+                role: m.role,
+                content: m.content,
+              })),
+            ],
+            model: "mixtral-8x7b-32768",
+            temperature: 0.7,
+            max_tokens: 1024,
+            top_p: 0.95,
+          })
 
-      try {
-        const videoResponse = await fetch(`${process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "http://localhost:3000"}/api/pollinations-video`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
-        })
-
-        const videoData = await videoResponse.json()
-        const encoder = new TextEncoder()
-        const videoMessage = `[فيديو]\n${videoData.videoUrl}`
-        return new Response(encoder.encode(videoMessage), {
-          headers: {
-            "Content-Type": "text/plain; charset=utf-8",
-            "X-Content-Type-Options": "nosniff",
-          },
-        })
-      } catch (error) {
-        console.error("[v0] Video generation error:", error)
-        const encoder = new TextEncoder()
-        return new Response(encoder.encode("آسف، ما قدرت أوليد الفيديو دلوقتي"), {
-          headers: { "Content-Type": "text/plain; charset=utf-8" },
-          status: 500,
-        })
-      }
-    }
-
-    // Regular chat response
-    const conversationHistory = messages.map((m: any) => ({
-      role: m.role === "user" ? ("user" as const) : ("assistant" as const),
-      content: m.content,
-    }))
-
-    console.log("[v0] Generating response with Gemini...")
-
-    const stream = await generateStreamingResponse(userMessage, conversationHistory)
-
-    const responseTime = (Date.now() - startTime) / 1000
-    console.log("[v0] Response generated in", responseTime, "seconds")
+          for await (const chunk of groqStream) {
+            const text = chunk.choices[0]?.delta?.content || ""
+            if (text) {
+              controller.enqueue(encoder.encode(text))
+            }
+          }
+          controller.close()
+        } catch (error) {
+          controller.error(error)
+        }
+      },
+    })
 
     return new Response(stream, {
       headers: {
@@ -164,7 +66,6 @@ export async function POST(req: Request) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     console.error("[v0] Chat error:", errorMessage)
-
     return new Response("آسف، في مشكلة مؤقتة. جرب تاني بعد شوية", {
       status: 500,
       headers: { "Content-Type": "text/plain; charset=utf-8" },
