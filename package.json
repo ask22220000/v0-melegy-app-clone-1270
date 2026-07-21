@@ -5,7 +5,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "lint": "eslint .",
+    "lint": "next lint",
     "start": "next start"
   },
   "dependencies": {
@@ -85,12 +85,6 @@
     "xlsx": "latest",
     "zod": "3.25.76"
   },
- "scripts": {
-    "dev": "next dev",
-    "build": "webpack --mode production",
-    "start": "next start",
-    "lint": "next lint"
-  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
@@ -103,5 +97,4 @@
     "webpack": "^5.105.4",
     "webpack-cli": "^5.1.4"
   }
-}
 }
