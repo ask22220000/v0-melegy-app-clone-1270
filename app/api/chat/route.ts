@@ -1,6 +1,6 @@
-import { generateStreamingResponse } from "@/lib/geminiNativeService"
+import { streamChatResponse, generateChatResponse } from "@/lib/groqService"
 
-export const maxDuration = 30
+export const maxDuration = 60
 
 // Detect if user wants to generate an image
 function isImageRequest(text: string): boolean {
@@ -148,9 +148,9 @@ export async function POST(req: Request) {
       content: m.content,
     }))
 
-    console.log("[v0] Generating response with Gemini...")
+    console.log("[v0] Generating response with Groq...")
 
-    const stream = await generateStreamingResponse(userMessage, conversationHistory)
+    const stream = await streamChatResponse(conversationHistory)
 
     const responseTime = (Date.now() - startTime) / 1000
     console.log("[v0] Response generated in", responseTime, "seconds")

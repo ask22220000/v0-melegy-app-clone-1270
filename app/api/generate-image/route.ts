@@ -1,10 +1,10 @@
-import { generateImage } from "@/lib/openrouterImageService"
+import { generateImage as generateImageService } from "@/lib/imageGenerationService"
 
-export const maxDuration = 30
+export const maxDuration = 60
 
 export async function POST(req: Request) {
   try {
-    const { prompt, width = 1024, height = 1024 } = await req.json()
+    const { prompt } = await req.json()
 
     if (!prompt) {
       return new Response(JSON.stringify({ error: "Prompt is required" }), {
@@ -13,146 +13,9 @@ export async function POST(req: Request) {
       })
     }
 
-    console.log("[v0] 1. Original Arabic prompt:", prompt)
+    console.log("[v0] Image generation request:", prompt)
 
-    // Extract negative prompts (things to avoid)
-    const negativePatterns = [
-      /بدون\s+([^،.]+)/gi,
-      /من\s+غير\s+([^،.]+)/gi,
-      /لا\s+يوجد\s+([^،.]+)/gi,
-      /مفيش\s+([^،.]+)/gi,
-    ]
-
-    let cleanPrompt = prompt
-    const negativeItems: string[] = []
-
-    for (const pattern of negativePatterns) {
-      const matches = prompt.match(pattern)
-      if (matches) {
-        for (const match of matches) {
-          const item = match.replace(/^(بدون|من غير|لا يوجد|مفيش)\s*/i, "").trim()
-          if (item) negativeItems.push(item)
-          cleanPrompt = cleanPrompt.replace(match, "").trim()
-        }
-      }
-    }
-
-    console.log("[v0] 2. After negative extraction:", cleanPrompt)
-    console.log("[v0] 3. Negative items found:", negativeItems)
-
-    // Translate using MyMemory
-    const translateText = async (text: string): Promise<string> => {
-      if (text.length <= 450) {
-        try {
-          const response = await fetch(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=ar|en`,
-          )
-          const data = await response.json()
-          if (data.responseStatus === 200 && data.responseData?.translatedText) {
-            const translated = data.responseData.translatedText
-            if (!translated.includes("QUERY LENGTH LIMIT") && !translated.includes("PLEASE SELECT")) {
-              return translated
-            }
-          }
-        } catch {
-          // Continue with dictionary fallback
-        }
-      }
-
-      // Split long text
-      const parts = text.split(/[،.؛,]/g).filter((p) => p.trim())
-      const translatedParts: string[] = []
-
-      for (const part of parts) {
-        if (!part.trim() || part.length < 2) continue
-        try {
-          const response = await fetch(
-            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(part.trim().substring(0, 450))}&langpair=ar|en`,
-          )
-          const data = await response.json()
-          if (data.responseStatus === 200 && data.responseData?.translatedText) {
-            const translated = data.responseData.translatedText
-            if (!translated.includes("QUERY LENGTH LIMIT") && !translated.includes("PLEASE SELECT")) {
-              translatedParts.push(translated)
-              continue
-            }
-          }
-          translatedParts.push(part)
-        } catch {
-          translatedParts.push(part)
-        }
-      }
-
-      return translatedParts.join(", ")
-    }
-
-    const translatedPrompt = await translateText(cleanPrompt)
-    console.log("[v0] 4. After MyMemory translation:", translatedPrompt)
-
-    // Arabic to English dictionary
-    const arabicToEnglish: { [key: string]: string } = {
-      صورة: "image",
-      محاربة: "warrior",
-      إغريقية: "Greek",
-      بدوية: "Bedouin",
-      ملابس: "clothes",
-      عتيقة: "vintage",
-      مجوهرات: "jewelry",
-      معدنية: "metal",
-      ترقص: "dancing",
-      حافية: "barefoot",
-      القدمين: "feet",
-      جمر: "embers",
-      مشتعل: "burning",
-      جسد: "body",
-      نقوش: "engravings",
-      قبلية: "tribal",
-      شعر: "hair",
-      ضفائر: "braids",
-      طويلة: "long",
-      خلفية: "background",
-      قمر: "moon",
-      مكتمل: "full",
-      منير: "shining",
-      سماء: "sky",
-      ليل: "night",
-      رموز: "symbols",
-      سحرية: "magical",
-      لاتينية: "Latin",
-      قديمة: "ancient",
-      مضيئة: "glowing",
-      ذهبي: "golden",
-      سينمائي: "cinematic",
-      فانتازيا: "fantasy",
-      مستقبل: "futuristic",
-      جودة: "quality",
-      ناعمة: "smooth",
-    }
-
-    let finalPrompt = translatedPrompt
-    for (const [arabic, english] of Object.entries(arabicToEnglish)) {
-      const regex = new RegExp(arabic, "gi")
-      finalPrompt = finalPrompt.replace(regex, english)
-    }
-
-    console.log("[v0] 5. After dictionary cleanup:", finalPrompt)
-
-    const qualitySuffix =
-      "8K ultra high resolution, highly detailed, professional quality, sharp focus, masterpiece, best quality, intricate details, vibrant colors, cinematic lighting"
-
-    const negativePrompt = negativeItems.length > 0 ? negativeItems.join(", ") + ", " : ""
-
-    const fullPrompt = `${finalPrompt}, ${qualitySuffix} | NEGATIVE: ${negativePrompt}blurry, low quality, pixelated, bad quality, low resolution, ugly, deformed, distorted, artifacts`
-
-    console.log("[v0] 6. Final prompt for Riverflow:", fullPrompt.substring(0, 500) + "...")
-
-    // Generate using OpenRouter Riverflow v2.5 Pro
-    const imageUrl = await generateImage({
-      prompt: fullPrompt,
-      width,
-      height,
-      numberOfImages: 1,
-    })
+    const imageUrl = await generateImageService(prompt)
 
     return new Response(JSON.stringify({ imageUrl }), {
       status: 200,
