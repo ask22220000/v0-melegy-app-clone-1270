@@ -4,9 +4,11 @@ let groqInstance: Groq | null = null
 
 function getGroqInstance(): Groq {
   if (!groqInstance) {
-    groqInstance = new Groq({
-      apiKey: process.env.GROQ_API_KEY,
-    })
+    const apiKey = process.env.GROQ_API_KEY
+    if (!apiKey) {
+      throw new Error("GROQ_API_KEY غير موجود في المتغيرات البيئية")
+    }
+    groqInstance = new Groq({ apiKey })
   }
   return groqInstance
 }
@@ -16,17 +18,11 @@ export async function generateChatResponse(
 ): Promise<string> {
   try {
     const groq = getGroqInstance()
-    const response = await groq.messages.create({
-      model: "mixtral-8x7b-32768", // نموذج مجاني من Groq
-      max_tokens: 2048,
-      system: `أنت مساعد ذكي متعدد المواهب يتحدث اللغة العربية بطلاقة. تساعد المستخدمين في:
-- الإجابة على الأسئلة بدقة وتفصيل
-- كتابة المحتوى الإبداعي
-- توليد الأفكار والاقتراحات
-- شرح المفاهيم المعقدة بسهولة
-- المساعدة في حل المشاكل
 
-كن ودياً وإيجابياً دائماً. استخدم التنسيق المناسب في الإجابات.`,
+    const response = await groq.messages.create({
+      model: "mixtral-8x7b-32768",
+      max_tokens: 1024,
+      system: `أنت مساعد ذكي يتحدث اللغة العربية بطلاقة. تساعد المستخدمين بإجابات دقيقة وودية ومفيدة.`,
       messages: messages.map((msg) => ({
         role: msg.role,
         content: msg.content,
@@ -35,12 +31,12 @@ export async function generateChatResponse(
 
     const textContent = response.content.find((block: any) => block.type === "text")
     if (!textContent || textContent.type !== "text") {
-      throw new Error("لم يحصل على رد نصي من الذكاء الاصطناعي")
+      throw new Error("لم يحصل على رد من الخادم")
     }
 
     return textContent.text
-  } catch (error) {
-    console.error("[v0] Groq API Error:", error)
+  } catch (error: any) {
+    console.error("[v0] Groq Error:", error?.message)
     throw error
   }
 }
@@ -48,39 +44,30 @@ export async function generateChatResponse(
 export async function streamChatResponse(
   messages: Array<{ role: "user" | "assistant"; content: string }>
 ): Promise<ReadableStream<string>> {
-  const messageObjects = messages.map((msg) => ({
-    role: msg.role as "user" | "assistant",
-    content: msg.content,
-  }))
-
   const groq = getGroqInstance()
-  const stream = await groq.messages.stream({
-    model: "mixtral-8x7b-32768",
-    max_tokens: 2048,
-    system: `أنت مساعد ذكي متعدد المواهب يتحدث اللغة العربية بطلاقة. تساعد المستخدمين في:
-- الإجابة على الأسئلة بدقة وتفصيل
-- كتابة المحتوى الإبداعي
-- توليد الأفكار والاقتراحات
-- شرح المفاهيم المعقدة بسهولة
-- المساعدة في حل المشاكل
-
-كن ودياً وإيجابياً دائماً. استخدم التنسيق المناسب في الإجابات.`,
-    messages: messageObjects,
-  })
 
   return new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of stream) {
-          if (
-            chunk.type === "content_block_delta" &&
-            chunk.delta.type === "text_delta"
-          ) {
-            controller.enqueue(chunk.delta.text)
+        const stream = groq.messages.stream({
+          model: "mixtral-8x7b-32768",
+          max_tokens: 1024,
+          system: `أنت مساعد ذكي يتحدث اللغة العربية بطلاقة. تساعد المستخدمين بإجابات دقيقة وودية ومفيدة.`,
+          messages: messages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          })),
+        })
+
+        for await (const event of stream) {
+          if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
+            controller.enqueue(event.delta.text || "")
           }
         }
+
         controller.close()
       } catch (error) {
+        console.error("[v0] Stream error:", error)
         controller.error(error)
       }
     },
@@ -90,27 +77,18 @@ export async function streamChatResponse(
 export async function enhancePrompt(prompt: string): Promise<string> {
   try {
     const groq = getGroqInstance()
+
     const response = await groq.messages.create({
       model: "mixtral-8x7b-32768",
-      max_tokens: 512,
-      system: `أنت متخصص في تحسين طلبات توليد الصور. قم بتحسين الطلب التالي لجعله أكثر وضوحاً وتفصيلاً لنموذج توليد صور AI.
-أرجع فقط الطلب المحسّن بدون تفسير إضافي.`,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      max_tokens: 500,
+      system: `أنت خبير في تحسين نصوص طلب توليد الصور. حسّن الطلب التالي بإضافة تفاصيل وجعله أكثر وضوحاً وفائدة.`,
+      messages: [{ role: "user", content: prompt }],
     })
 
     const textContent = response.content.find((block: any) => block.type === "text")
-    if (!textContent || textContent.type !== "text") {
-      return prompt
-    }
-
-    return textContent.text
+    return textContent?.text || prompt
   } catch (error) {
-    console.error("[v0] Error enhancing prompt:", error)
+    console.error("[v0] Error in enhancePrompt:", error)
     return prompt
   }
 }
@@ -118,30 +96,18 @@ export async function enhancePrompt(prompt: string): Promise<string> {
 export async function generateCode(prompt: string): Promise<string> {
   try {
     const groq = getGroqInstance()
+
     const response = await groq.messages.create({
       model: "mixtral-8x7b-32768",
       max_tokens: 2048,
-      system: `أنت مساعد برمجة خبير. قم بكتابة الكود بناءً على الطلب. 
-- استخدم اللغات الحديثة والممارسات الجيدة
-- أضف تعليقات في الكود
-- تأكد من أن الكود جاهز للاستخدام
-أرجع الكود داخل كود markdown blocks مع تحديد لغة البرمجة.`,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      system: `أنت مهندس برمجة متخصص. اكتب كود نظيف وآمن بناءً على الطلب.`,
+      messages: [{ role: "user", content: prompt }],
     })
 
     const textContent = response.content.find((block: any) => block.type === "text")
-    if (!textContent || textContent.type !== "text") {
-      throw new Error("لم يتمكن من توليد الكود")
-    }
-
-    return textContent.text
+    return textContent?.text || "لم أتمكن من توليد الكود"
   } catch (error) {
-    console.error("[v0] Error generating code:", error)
+    console.error("[v0] Error in generateCode:", error)
     throw error
   }
 }
