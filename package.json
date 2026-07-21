@@ -100,9 +100,8 @@
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "typescript": "^5",
-ask22220000-patch-1
     "webpack": "^5.105.4",
     "webpack-cli": "^5.1.4"
- main
   }
+}
 }
